@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>บริษัท น้ำเพชรค้าไม้ จำกัด - ระบบวัสดุก่อสร้าง One Stop Service</title>
+  <meta name="description" content="บริษัท น้ำเพชรค้าไม้ จำกัด (8 หมู่ที่ 1 ต.หนองปรง อ.เขาย้อย จ.เพชรบุรี 76140 | 080-995-7811, 086-339-1833, 081-526-2975) ระบบจัดการวัสดุก่อสร้าง ไม้ฝา ไม้พื้น ยิปซั่ม สมาร์ทบอร์ด เสารั้ว ลวดหนาม คลังสินค้า POS ขนส่ง">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-logo">🪵</div>
+        <div>
+          <div class="brand-title">น้ำเพชรค้าไม้</div>
+          <div class="brand-subtitle">บจก. น้ำเพชรค้าไม้ จำกัด</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-group-title">ภาพรวม & บริการลูกค้า</div>
+        <a class="nav-item active" data-module="dashboard">
+          <span class="icon">📊</span>
+          <span>Dashboard & แบรนด์ KPI</span>
+        </a>
+        <a class="nav-item" data-module="one_stop_scenario">
+          <span class="icon">🌟</span>
+          <span>จำลองสร้างบ้าน 1 หลัง</span>
+        </a>
+        <a class="nav-item" data-module="boq_calculator">
+          <span class="icon">🧮</span>
+          <span>คำนวณ Auto-BOQ & รั้ว</span>
+        </a>
+
+        <div class="nav-group-title">หน้าร้าน & ขาย</div>
+        <a class="nav-item" data-module="sales_pos">
+          <span class="icon">🛒</span>
+          <span>ระบบขาย & POS (Cashier)</span>
+        </a>
+        <a class="nav-item" data-module="ecommerce">
+          <span class="icon">🌐</span>
+          <span>E-Commerce & Chat</span>
+        </a>
+        <a class="nav-item" data-module="product">
+          <span class="icon">📦</span>
+          <span>คลังข้อมูลสินค้า SKU</span>
+        </a>
+
+        <div class="nav-group-title">คลัง จัดซื้อ & ขนส่ง</div>
+        <a class="nav-item" data-module="warehouse">
+          <span class="icon">🏭</span>
+          <span>คลังสินค้า & สต๊อก Lot</span>
+        </a>
+        <a class="nav-item" data-module="procurement">
+          <span class="icon">📝</span>
+          <span>จัดซื้อ & ใบสั่งซื้อ PO</span>
+        </a>
+        <a class="nav-item" data-module="logistics">
+          <span class="icon">🚚</span>
+          <span>จัดคิวรถ (0-10 คน) & POD</span>
+        </a>
+
+        <div class="nav-group-title">CRM & การเงิน</div>
+        <a class="nav-item" data-module="crm">
+          <span class="icon">👑</span>
+          <span>CRM & Member Tiers</span>
+        </a>
+        <a class="nav-item" data-module="accounting">
+          <span class="icon">💰</span>
+          <span>การเงิน & เตือนชำระ AR</span>
+          <span class="badge-count">2</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main Wrapper -->
+    <div class="main-wrapper">
+      <!-- Top Header -->
+      <header class="top-header">
+        <div class="header-left">
+          <button id="sidebar-toggle" class="btn btn-secondary btn-sm no-print">☰ Menu</button>
+          <h1 class="page-title" id="page-module-title">📊 Dashboard ผู้บริหาร - บริษัท น้ำเพชรค้าไม้ จำกัด</h1>
+        </div>
+
+        <div class="header-actions">
+          <div id="role-switcher-btn" title="สลับสิทธิ์การใช้งานระหว่าง Supervisor และ Cashier">
+            <div id="user-role-display" class="role-badge cashier">
+              🧑‍💻 คุณสมชาย (พนักงาน POS / Cashier)
+            </div>
+          </div>
+
+          <button class="btn btn-secondary btn-sm" onclick="AppStore.reset()">🔄 Reset Data</button>
+        </div>
+      </header>
+
+      <!-- Content Body Container -->
+      <main class="content-body">
+        <div id="payment-alert-banner"></div>
+        <div id="module-content-container"></div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;"></div>
+
+  <!-- Global Modal Dialog System -->
+  <div id="global-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title-text" class="modal-title">Modal Title</h3>
+        <button class="modal-close" onclick="AppEngine.closeModal()">&times;</button>
+      </div>
+      <div id="modal-body-container" class="modal-body"></div>
+      <div id="modal-footer-container" class="modal-footer"></div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+  <script src="modules/dashboard.js"></script>
+  <script src="modules/product.js"></script>
+  <script src="modules/procurement.js"></script>
+  <script src="modules/warehouse.js"></script>
+  <script src="modules/sales_pos.js"></script>
+  <script src="modules/ecommerce.js"></script>
+  <script src="modules/boq_calculator.js"></script>
+  <script src="modules/logistics.js"></script>
+  <script src="modules/crm.js"></script>
+  <script src="modules/accounting.js"></script>
+  <script src="modules/one_stop_scenario.js"></script>
+</body>
+</html>
