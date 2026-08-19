@@ -2,14 +2,12 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "antigravity-mvp",
   "compatibility_date": "2026-08-18",
-  "pages_build_output_dir": "./",
+  "assets": "./",
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "namphfetconstruction_db",
+      "database_name": "namphet_construction_db",
       "database_id": "b9568806-8f16-4a8c-a452-2217dcb4779c"
     }
   ]
 }
-
-
