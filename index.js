@@ -1,64 +1,56 @@
-// ==========================================
-// Cloudflare Worker Main Entrypoint (index.js)
-// บริษัท น้ำเพชรค้าไม้ จำกัด (One Stop Service Platform)
-// ==========================================
+﻿// Self-Contained Cloudflare Worker serving Static Assets & D1 API
+// เธเธฃเธดเธฉเธฑเธ— เธเนเธณเน€เธเธเธฃเธเนเธฒเนเธกเน เธเธณเธเธฑเธ” (One Stop Service)
+
+const staticFiles = {
+  '/': $escapedHtml,
+  '/index.html': $escapedHtml,
+  '/styles.css': $escapedCss,
+  '/data.js': $escapedData,
+  '/app.js': $escapedApp,
+  '/modules/accounting.js': $escaped,
+  '/modules/boq_calculator.js': $escaped,
+  '/modules/crm.js': $escaped,
+  '/modules/dashboard.js': $escaped,
+  '/modules/ecommerce.js': $escaped,
+  '/modules/logistics.js': $escaped,
+  '/modules/one_stop_scenario.js': $escaped,
+  '/modules/procurement.js': $escaped,
+  '/modules/product.js': $escaped,
+  '/modules/sales_pos.js': $escaped,
+  '/modules/warehouse.js': $escaped,
+
+};
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const path = url.pathname;
 
-    // 1. API Endpoint: GET /api/products (Cloudflare D1 Query)
-    if (url.pathname === "/api/products") {
+    // 1. API Endpoint: GET /api/products
+    if (path === "/api/products") {
       try {
-        if (!env.DB) {
-          return new Response(JSON.stringify({ success: false, message: "D1 Database binding missing" }), {
-            headers: { "content-type": "application/json; charset=utf-8" }
-          });
-        }
+        if (!env.DB) return new Response(JSON.stringify({ success: false, message: "D1 Database missing" }), { headers: { "content-type": "application/json; charset=utf-8" } });
         const { results } = await env.DB.prepare("SELECT * FROM products ORDER BY sku ASC").all();
-        return new Response(JSON.stringify({ success: true, products: results }), {
-          headers: { "content-type": "application/json; charset=utf-8" }
-        });
+        return new Response(JSON.stringify({ success: true, products: results }), { headers: { "content-type": "application/json; charset=utf-8" } });
       } catch (err) {
-        return new Response(JSON.stringify({ error: err.message }), {
-          status: 500,
-          headers: { "content-type": "application/json; charset=utf-8" }
-        });
+        return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { "content-type": "application/json; charset=utf-8" } });
       }
     }
 
-    // 2. API Endpoint: POST /api/checkout (Cloudflare D1 POS Checkout & Stock Deduction)
-    if (url.pathname === "/api/checkout" && request.method === "POST") {
-      try {
-        const data = await request.json();
-        const { docNo, docType, customerName, customerAddress, customerTaxId, vatType, subtotal, vatAmount, deliveryFee, depositAmount, grandTotal, paymentMethod, cashierId, items } = data;
-
-        if (env.DB) {
-          await env.DB.prepare(`
-            INSERT INTO sales_transactions (doc_no, doc_type, customer_name, customer_address, customer_tax_id, vat_type, subtotal, vat_amount, delivery_fee, deposit_amount, grand_total, remaining_amount, payment_method, cashier_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `).bind(docNo, docType, customerName, customerAddress, customerTaxId, vatType, subtotal, vatAmount, deliveryFee, depositAmount, grandTotal, Math.max(0, grandTotal - depositAmount), paymentMethod, cashierId).run();
-
-          for (const item of items) {
-            await env.DB.prepare("UPDATE products SET stock = MAX(0, stock - ?) WHERE sku = ?").bind(item.qty, item.sku).run();
-          }
-        }
-        return new Response(JSON.stringify({ success: true, docNo }), {
-          headers: { "content-type": "application/json; charset=utf-8" }
-        });
-      } catch (err) {
-        return new Response(JSON.stringify({ error: err.message }), {
-          status: 500,
-          headers: { "content-type": "application/json; charset=utf-8" }
-        });
-      }
+    // 2. Serve Static File from Memory Map
+    if (staticFiles[path]) {
+      let mime = "text/html; charset=utf-8";
+      if (path.endsWith(".css")) mime = "text/css; charset=utf-8";
+      else if (path.endsWith(".js")) mime = "application/javascript; charset=utf-8";
+      
+      return new Response(staticFiles[path], {
+        headers: { "content-type": mime, "cache-control": "public, max-age=3600" }
+      });
     }
 
-    // 3. Serve Static Assets (index.html, styles.css, app.js, modules/*.js)
-    if (env.ASSETS) {
-      return env.ASSETS.fetch(request);
-    }
-
-    return new Response("Namphet Construction WebApp Online", { status: 200 });
+    // Fallback to index.html for SPA routes
+    return new Response(staticFiles['/'], {
+      headers: { "content-type": "text/html; charset=utf-8" }
+    });
   }
 };
