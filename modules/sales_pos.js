@@ -11,7 +11,7 @@ window.PosCart = {
   deliveryMode: 'DELIVERY',
   distanceKm: 5,
   depositAmount: 0,
-  selectedCashierId: 'CS-001',
+  selectedCashierId: 'CSR-1',
   paymentMethod: 'CASH',
   selectedBankId: 'KBANK',
   customerName: '',

@@ -48,11 +48,12 @@ window.InitialAppData = {
   // 4. Products Master Database (Default Clean Empty Array)
   products: [],
 
-  // 5. Cashiers List
+  // 5. Cashiers List (เฉพาะ 4 Cashiers: CSR-1, CSR-2, CSR-3, CSR-4)
   cashiers: [
-    { id: "CS-001", name: "สมชาย สายเปย์", terminal: "POS-01 (เคาน์เตอร์ 1)", totalToday: 0 },
-    { id: "CS-002", name: "วิภาดา ขยันขาย", terminal: "POS-02 (เคาน์เตอร์ 2)", totalToday: 0 },
-    { id: "SUP-001", name: "สมศักดิ์ ผู้จัดการ", terminal: "POS-00 (ADMIN)", totalToday: 0 }
+    { id: "CSR-1", name: "นายสมชาย (พนักงานขาย 1)", terminal: "POS-01 (เคาน์เตอร์ 1)", totalToday: 0 },
+    { id: "CSR-2", name: "พนักงานขาย 2", terminal: "POS-02 (เคาน์เตอร์ 2)", totalToday: 0 },
+    { id: "CSR-3", name: "พนักงานขาย 3", terminal: "POS-03 (เคาน์เตอร์ 3)", totalToday: 0 },
+    { id: "CSR-4", name: "พนักงานขาย 4", terminal: "POS-04 (เคาน์เตอร์ 4)", totalToday: 0 }
   ],
 
   // 6. Bank Accounts

@@ -46,7 +46,12 @@ window.AppStore = {
           exists.password = du.password;
         }
       });
-    }
+    this.data.cashiers = [
+      { id: "CSR-1", name: "นายสมชาย (พนักงานขาย 1)", terminal: "POS-01 (เคาน์เตอร์ 1)", totalToday: 0 },
+      { id: "CSR-2", name: "พนักงานขาย 2", terminal: "POS-02 (เคาน์เตอร์ 2)", totalToday: 0 },
+      { id: "CSR-3", name: "พนักงานขาย 3", terminal: "POS-03 (เคาน์เตอร์ 3)", totalToday: 0 },
+      { id: "CSR-4", name: "พนักงานขาย 4", terminal: "POS-04 (เคาน์เตอร์ 4)", totalToday: 0 }
+    ];
 
     this.save();
   },
