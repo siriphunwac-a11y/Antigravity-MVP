@@ -1,6 +1,6 @@
 // ==========================================
 // Main Application Engine & Auth Manager
-// (บริษัท น้ำเพชรค้าไม้ จำกัด)
+// (บริษัท น้ำเพชรค้าไม้ จำกัด - Production Platform)
 // ==========================================
 
 window.AppStore = {
@@ -35,36 +35,6 @@ window.AppStore = {
 
   save() {
     localStorage.setItem(this.key, JSON.stringify(this.data));
-  },
-
-  reset() {
-    if (confirm('คุณต้องการโหลดข้อมูลตัวอย่าง (Demo Data) กลับมาใช่หรือไม่?')) {
-      localStorage.removeItem(this.key);
-      this.data = window.InitialAppData;
-      this.data.currentUser = {
-        username: 'admin',
-        name: 'นายสมศักดิ์ (หัวหน้างาน / ผู้จัดการ)',
-        role: 'supervisor',
-        avatar: '👨‍💼',
-        isLoggedIn: true
-      };
-      this.save();
-      window.location.reload();
-    }
-  },
-
-  clearBlankStore() {
-    if (confirm('⚠️ ยืนยันล้างข้อมูลตัวอย่างทั้งหมด?\n\nระบบจะล้างรายการสินค้าตัวอย่าง สต๊อก และประวัติการขายทั้งหมดให้เป็น 0 (ว่างเปล่า) เพื่อให้คุณสามารถเริ่มคีย์ข้อมูลสินค้าจริงของร้านได้ทันที')) {
-      this.data.products = [];
-      this.data.stockLogs = [];
-      this.data.purchaseOrders = [];
-      this.data.arBills = [];
-      if (this.data.cashiers) {
-        this.data.cashiers.forEach(c => c.totalToday = 0);
-      }
-      this.save();
-      window.location.reload();
-    }
   }
 };
 
