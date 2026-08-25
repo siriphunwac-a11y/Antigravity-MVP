@@ -51,20 +51,28 @@ export default {
       }
     }
 
-    // 2. Serve Static File
+    // 2. Serve Static File (NO CACHE CONTROL so updates load immediately)
     if (staticFiles[path]) {
       let mime = "text/html; charset=utf-8";
       if (path.endsWith(".css")) mime = "text/css; charset=utf-8";
       else if (path.endsWith(".js")) mime = "application/javascript; charset=utf-8";
       
       return new Response(staticFiles[path], {
-        headers: { "content-type": mime, "cache-control": "public, max-age=3600" }
+        headers: { 
+          "content-type": mime, 
+          "cache-control": "no-cache, no-store, must-revalidate",
+          "pragma": "no-cache",
+          "expires": "0"
+        }
       });
     }
 
     // Fallback SPA
     return new Response(staticFiles['/'], {
-      headers: { "content-type": "text/html; charset=utf-8" }
+      headers: { 
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-cache, no-store, must-revalidate"
+      }
     });
   }
 };
