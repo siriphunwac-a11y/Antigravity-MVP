@@ -1,14 +1,15 @@
 // ==========================================
 // Executive Dashboard, Brand & SKU Comparison KPI Module
+// (บริษัท น้ำเพชรค้าไม้ จำกัด)
 // ==========================================
 
 window.Modules = window.Modules || {};
 
 window.Modules.dashboard = function() {
   const store = window.AppStore.data;
-  const brands = store.brands || [];
   const cashiers = store.cashiers || [];
   const products = store.products || [];
+  const trucks = store.trucks || [];
 
   // Calculate totals
   const totalSalesToday = cashiers.reduce((acc, c) => acc + (c.totalToday || 0), 0);
@@ -17,6 +18,8 @@ window.Modules.dashboard = function() {
     const avgCost = p.lots && p.lots.length > 0 ? p.lots[0].costPrice : p.price * 0.8;
     return acc + (p.stock * avgCost);
   }, 0);
+
+  const activeTrucksCount = trucks.filter(t => t.status === 'En Route').length;
 
   return `
     <div class="dashboard-module">
@@ -49,13 +52,13 @@ window.Modules.dashboard = function() {
         <div class="kpi-card">
           <div class="kpi-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">🚚</div>
           <div>
-            <div class="kpi-value">2 คิว</div>
+            <div class="kpi-value">${activeTrucksCount} คิว</div>
             <div class="kpi-label">รถจัดส่งพร้อมเดินทางวันนี้</div>
           </div>
         </div>
       </div>
 
-      <!-- NEW CUSTOMIZATION: KPI เปรียบเทียบ แยกตาม SKU (SKU-level KPI Performance Matrix) -->
+      <!-- SKU-level KPI Performance Matrix -->
       <div class="card mb-4">
         <div class="card-header">
           <div class="card-title">
@@ -81,66 +84,25 @@ window.Modules.dashboard = function() {
               </tr>
             </thead>
             <tbody>
+              ${products.length === 0 ? `
+                <tr>
+                  <td colspan="7" style="text-align: center; color: var(--text-dim); padding: 35px;">
+                    <div style="font-size: 1.8rem; margin-bottom: 5px;">📦</div>
+                    ยังไม่มีข้อมูลสินค้าในระบบ (0 รายการ) - คลิกที่เมนู <strong>คลังข้อมูลสินค้า SKU</strong> เพื่อเริ่มเพิ่มสินค้าแรกของร้าน
+                  </td>
+                </tr>
+              ` : ''}
               ${products.map((p, idx) => `
                 <tr>
                   <td style="font-weight: 700; color: var(--accent-cyan-light);">${p.sku}</td>
-                  <td style="font-weight: 600;">${p.image} ${p.name}</td>
-                  <td><span class="badge badge-info">${p.brand}</span></td>
-                  <td style="font-weight: 700;">${AppEngine.formatNumber(p.unitsSoldMonth || 1200)} ${p.unit}</td>
-                  <td style="font-weight: 700; color: #10b981;">฿${AppEngine.formatCurrency(p.totalSalesMonth || (p.price * 1200))}</td>
-                  <td style="font-weight: 600; color: var(--accent-amber);">+${p.marginPercent || 22.5}%</td>
+                  <td style="font-weight: 600;">${p.image || '📦'} ${p.name}</td>
+                  <td><span class="badge badge-info">${p.brand || 'ทั่วไป'}</span></td>
+                  <td style="font-weight: 700;">${AppEngine.formatNumber(p.unitsSoldMonth || 0)} ${p.unit}</td>
+                  <td style="font-weight: 700; color: #10b981;">฿${AppEngine.formatCurrency(p.totalSalesMonth || 0)}</td>
+                  <td style="font-weight: 600; color: var(--accent-amber);">+${p.marginPercent || 0}%</td>
                   <td>
-                    ${idx === 0 ? '<span class="badge badge-success">🏆 อันดับ 1 (Best Seller)</span>' :
-                      idx === 1 ? '<span class="badge badge-info">🥈 อันดับ 2</span>' :
+                    ${idx === 0 ? '<span class="badge badge-success">🏆 อันดับ 1</span>' :
                       '<span class="badge badge-secondary">อันดับ ' + (idx + 1) + '</span>'}
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Brand Performance KPI Comparison -->
-      <div class="card mb-4">
-        <div class="card-header">
-          <div class="card-title">
-            <span>🏷️</span> KPI เปรียบเทียบยี่ห้อสินค้า (Brand Performance Comparison Matrix)
-          </div>
-          <span class="badge badge-info">แยกตามแบรนด์</span>
-        </div>
-        
-        <div class="table-responsive">
-          <table class="custom-table">
-            <thead>
-              <tr>
-                <th>แบรนด์สินค้า (Brand)</th>
-                <th>หมวดหมู่หลัก</th>
-                <th>ยอดขายเดือนนี้</th>
-                <th>ส่วนแบ่งตลาด (Market Share)</th>
-                <th>อัตรากำไรขั้นต้น (Margin %)</th>
-                <th>สถานะยอดขาย</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${brands.map(b => `
-                <tr>
-                  <td style="font-weight: 600; display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 1.3rem;">${b.logo}</span> ${b.name}
-                  </td>
-                  <td>${b.category}</td>
-                  <td style="font-weight: 700; color: var(--accent-cyan-light);">฿${AppEngine.formatCurrency(b.salesThisMonth)}</td>
-                  <td>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                      <div style="flex: 1; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
-                        <div style="width: ${b.marketShare}%; height: 100%; background: linear-gradient(90deg, #06b6d4, #3b82f6);"></div>
-                      </div>
-                      <span>${b.marketShare}%</span>
-                    </div>
-                  </td>
-                  <td style="font-weight: 600; color: #10b981;">+${b.profitMargin}%</td>
-                  <td>
-                    ${b.profitMargin > 20 ? '<span class="badge badge-success">High Margin 🔥</span>' : '<span class="badge badge-info">Normal Target</span>'}
                   </td>
                 </tr>
               `).join('')}
@@ -170,7 +132,7 @@ window.Modules.dashboard = function() {
                   <tr>
                     <td style="font-weight: 600;">${c.id} - ${c.name}</td>
                     <td>${c.terminal}</td>
-                    <td><span class="badge ${c.status === 'Active' ? 'badge-success' : 'badge-warning'}">${c.status}</span></td>
+                    <td><span class="badge badge-success">พร้อมใช้งาน</span></td>
                     <td style="font-weight: 700; color: var(--accent-cyan-light);">฿${AppEngine.formatCurrency(c.totalToday)}</td>
                   </tr>
                 `).join('')}
@@ -185,14 +147,18 @@ window.Modules.dashboard = function() {
             <div class="card-title">📈 AI Forecast Demand & สินค้าขายดีประจำสัปดาห์</div>
           </div>
           <div style="display: flex; flex-direction: column; gap: 12px;">
-            <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border-left: 3px solid #06b6d4;">
-              <div style="font-weight: 600;">🧱 ปูนซีเมนต์ผสม SCG ซูเปอร์เสือ</div>
-              <div style="font-size: 0.82rem; color: var(--text-muted);">พยากรณ์ความต้องการ 7 วันข้างหน้า: <strong>650 ถุง</strong> (แนะนำสั่งเพิ่มใน PO)</div>
-            </div>
-            <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border-left: 3px solid #3b82f6;">
-              <div style="font-weight: 600;">⚙️ เหล็กเส้นข้ออ้อย DB12 มอก. SD40</div>
-              <div style="font-size: 0.82rem; color: var(--text-muted);">พยากรณ์ความต้องการ 7 วันข้างหน้า: <strong>420 เส้น</strong> (เพียงพอ)</div>
-            </div>
+            ${products.length === 0 ? `
+              <div style="text-align: center; color: var(--text-dim); padding: 30px; font-size: 0.88rem;">
+                🤖 ระบบ AI จะทำการวิเคราะห์และพยากรณ์ความต้องการสินค้าเมื่อเริ่มคีย์ข้อมูล SKU และประวัติการออกบิลขาย
+              </div>
+            ` : `
+              ${products.slice(0, 2).map(p => `
+                <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border-left: 3px solid #06b6d4;">
+                  <div style="font-weight: 600;">[${p.sku}] ${p.name}</div>
+                  <div style="font-size: 0.82rem; color: var(--text-muted);">พยากรณ์ความต้องการ 7 วันข้างหน้า: <strong>${Math.floor((p.stock || 50) * 0.5)} ${p.unit}</strong></div>
+                </div>
+              `).join('')}
+            `}
           </div>
         </div>
       </div>

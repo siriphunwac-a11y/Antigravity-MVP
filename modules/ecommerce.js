@@ -1,10 +1,14 @@
 // ==========================================
 // E-Commerce, Mobile App & Chat Commerce (LINE OA) Module
+// (บริษัท น้ำเพชรค้าไม้ จำกัด)
 // ==========================================
 
 window.Modules = window.Modules || {};
 
 window.Modules.ecommerce = function() {
+  const store = window.AppStore.data;
+  const products = store.products || [];
+
   return `
     <div class="ecommerce-module">
       <!-- Tabs: Web Storefront vs Mobile App Mode vs LINE OA Chat Commerce -->
@@ -21,28 +25,27 @@ window.Modules.ecommerce = function() {
           <span class="badge badge-success">🟢 เปิดให้บริการ 24 ชม.</span>
         </div>
 
-        <div class="grid-3" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-          <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
-            <div style="font-size: 2.5rem;">🧱</div>
-            <h4 style="font-size: 1rem; font-weight: 600;">ปูนซีเมนต์ผสม SCG ซูเปอร์เสือ</h4>
-            <p style="color: var(--accent-cyan-light); font-weight: 700;">฿145 / ถุง</p>
-            <button class="btn btn-sm btn-primary" style="margin-top: 10px; width: 100%;" onclick="AppEngine.showToast('เพิ่มใส่ตะกร้าออนไลน์แล้ว', 'success')">🛒 สั่งซื้อออนไลน์</button>
+        ${products.length === 0 ? `
+          <div style="text-align: center; color: var(--text-dim); padding: 40px;">
+            <div style="font-size: 2.5rem; margin-bottom: 10px;">🌐</div>
+            <h4 style="color: #67e8f9;">ร้านค้าออนไลน์ยังไม่มีรายการสินค้า (0 รายการ)</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 5px; margin-bottom: 15px;">
+              สินค้าที่ถูกเพิ่มในหน้าคลังสินค้า SKU จะแสดงผลในหน้าร้านออนไลน์โดยอัตโนมัติ
+            </p>
+            <button class="btn btn-primary" onclick="Modules.product_openAddSkuModal()">+ เพิ่ม SKU สินค้าแรกเข้าร้านค้าออนไลน์</button>
           </div>
-
-          <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
-            <div style="font-size: 2.5rem;">🟫</div>
-            <h4 style="font-size: 1rem; font-weight: 600;">อิฐมวลเบา คิวคอน Q-CON 7.5 ซม.</h4>
-            <p style="color: var(--accent-cyan-light); font-weight: 700;">฿22 / ก้อน</p>
-            <button class="btn btn-sm btn-primary" style="margin-top: 10px; width: 100%;" onclick="AppEngine.showToast('เพิ่มใส่ตะกร้าออนไลน์แล้ว', 'success')">🛒 สั่งซื้อออนไลน์</button>
+        ` : `
+          <div class="grid-3" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+            ${products.map(p => `
+              <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <div style="font-size: 2.5rem;">${p.image || '📦'}</div>
+                <h4 style="font-size: 1rem; font-weight: 600;">[${p.sku}] ${p.name}</h4>
+                <p style="color: var(--accent-cyan-light); font-weight: 700;">฿${AppEngine.formatCurrency(p.price)} / ${p.unit}</p>
+                <button class="btn btn-sm btn-primary" style="margin-top: 10px; width: 100%;" onclick="AppEngine.showToast('เพิ่ม ${p.name} ใส่ตะกร้าออนไลน์แล้ว', 'success')">🛒 สั่งซื้อออนไลน์</button>
+              </div>
+            `).join('')}
           </div>
-
-          <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
-            <div style="font-size: 2.5rem;">🎨</div>
-            <h4 style="font-size: 1rem; font-weight: 600;">สีทาภายนอก TOA SuperShield 5G</h4>
-            <p style="color: var(--accent-cyan-light); font-weight: 700;">฿3,450 / ถัง</p>
-            <button class="btn btn-sm btn-primary" style="margin-top: 10px; width: 100%;" onclick="AppEngine.showToast('เพิ่มใส่ตะกร้าออนไลน์แล้ว', 'success')">🛒 สั่งซื้อออนไลน์</button>
-          </div>
-        </div>
+        `}
       </div>
 
       <!-- Mobile App View Simulator Container -->
@@ -53,10 +56,9 @@ window.Modules.ecommerce = function() {
           <span style="font-size: 0.75rem; color: var(--text-muted);">โหมดใช้งานผ่านแอปพลิเคชันมือถือ</span>
         </div>
 
-        <div style="background: rgba(6,182,212,0.1); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+        <div style="background: rgba(6,182,212,0.1); padding: 12px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
           <div style="font-weight: 600; font-size: 0.85rem;">📦 สถานะการจัดส่งเรียลไทม์ (Live Order)</div>
-          <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">คำสั่งซื้อ #ORD-2026-0099 (รถทะเบียน 82-5678)</div>
-          <div style="margin-top: 8px; font-weight: 700; color: #10b981; font-size: 0.82rem;">🚚 สินค้าอยู่ระหว่างการจัดส่ง (ใกล้ถึงแล้ว)</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">ขณะนี้ยังไม่มีคำสั่งซื้อที่อยู่ระหว่างการจัดส่ง</div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -72,22 +74,9 @@ window.Modules.ecommerce = function() {
           <span style="font-size: 0.8rem;">@onestop_construction</span>
         </div>
 
-        <div style="background: #111b21; padding: 15px; min-height: 250px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="background: #111b21; padding: 15px; min-height: 200px; display: flex; flex-direction: column; gap: 10px;">
           <div style="background: #202c33; color: #fff; padding: 10px; border-radius: 10px; max-width: 80%; align-self: flex-start; font-size: 0.85rem;">
-            🤖 สวัสดีครับ! ยินดีต้อนรับสู่บริการสั่งซื้อวัสดุก่อสร้างผ่าน LINE OA พิมพ์ส่งรายการวัสดุที่ต้องการได้เลยครับ
-          </div>
-
-          <div style="background: #005c4b; color: #fff; padding: 10px; border-radius: 10px; max-width: 80%; align-self: flex-end; font-size: 0.85rem;">
-            ขอปูนซีเมนต์ SCG เสือ 50 ถุง และ อิฐมวลเบา 500 ก้อน จัดส่งไซต์งานบางใหญ่ครับ
-          </div>
-
-          <div style="background: #202c33; color: #fff; padding: 10px; border-radius: 10px; max-width: 80%; align-self: flex-start; font-size: 0.85rem;">
-            ✅ สรุปยอดสั่งซื้อ:<br>
-            • ปูนซีเมนต์ SCG เสือ 50 ถุง = ฿7,250<br>
-            • อิฐมวลเบา Q-CON 500 ก้อน = ฿11,000<br>
-            • ค่าจัดส่ง (12 กม.) = ฿105<br>
-            <strong>รวมสุทธิ: ฿18,355</strong><br>
-            <button class="btn btn-sm btn-success" style="margin-top: 8px;" onclick="AppEngine.showToast('สร้างใบเสนอราคาจาก LINE OA สำเร็จ!', 'success')">📲 กดชำระเงินมัดจำผ่าน PromptPay QR</button>
+            🤖 สวัสดีครับ! ยินดีต้อนรับสู่บริการสั่งซื้อวัสดุก่อสร้างผ่าน LINE OA พิมพ์สอบถามและสั่งซื้อวัสดุได้ตลอด 24 ชม. ครับ
           </div>
         </div>
       </div>

@@ -8,6 +8,7 @@ window.Modules = window.Modules || {};
 window.Modules.logistics = function() {
   const store = window.AppStore.data;
   const trucks = store.trucks || [];
+  const enRouteTruck = trucks.find(t => t.status === 'En Route');
 
   return `
     <div class="logistics-module">
@@ -32,6 +33,7 @@ window.Modules.logistics = function() {
               </tr>
             </thead>
             <tbody>
+              ${trucks.length === 0 ? '<tr><td colspan="7" style="text-align: center; color: var(--text-dim); padding: 30px;">ยังไม่มีรถในคิวจัดส่ง (0 คัน)</td></tr>' : ''}
               ${trucks.map(t => `
                 <tr>
                   <td style="font-weight: 700; color: var(--accent-cyan-light);">${t.id} - ${t.type}</td>
@@ -45,7 +47,7 @@ window.Modules.logistics = function() {
                   </td>
                   <td>
                     <span class="badge ${t.status === 'Available' ? 'badge-success' : t.status === 'En Route' ? 'badge-warning' : 'badge-danger'}">
-                      ${t.status}
+                      ${t.status === 'Available' ? 'ว่างพร้อมปฏิบัติงาน' : t.status === 'En Route' ? 'กำลังเดินทางจัดส่ง' : 'ซ่อมบำรุง'}
                     </span>
                   </td>
                   <td style="font-size: 0.85rem;">📍 ${t.currentLocation}</td>
@@ -67,10 +69,10 @@ window.Modules.logistics = function() {
           </div>
           <div class="form-group">
             <label class="form-label">ระบุระยะทางจัดส่งจากร้าน อ.เขาย้อย ถึงไซต์งาน (กิโลเมตร):</label>
-            <input type="number" id="logistics-dist-km" class="form-control" value="18" oninput="Modules.logistics_calcFee()">
+            <input type="number" id="logistics-dist-km" class="form-control" placeholder="กรอกระยะทาง (เช่น 15)" oninput="Modules.logistics_calcFee()">
           </div>
           <div id="logistics-fee-result" style="background: rgba(6, 182, 212, 0.1); border: 1px solid #06b6d4; padding: 15px; border-radius: 8px;">
-            <!-- Result -->
+            <div style="font-size: 0.88rem; color: var(--text-muted);">กรอกระยะทางกิโลเมตรด้านบนเพื่อคำนวณค่าจัดส่งประเมิน</div>
           </div>
         </div>
 
@@ -79,10 +81,17 @@ window.Modules.logistics = function() {
             <div class="card-title">🗺️ GPS Tracking Simulation (ติดตามรถส่งของ Real-time)</div>
           </div>
           <div style="background: #091322; border: 1px solid var(--border-color); height: 180px; border-radius: 8px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-            <div style="position: absolute; top: 15px; left: 20px; font-size: 0.8rem; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px;">
-              🟢 TRK-02 (ทะเบียน 82-5678) ➔ มุ่งหน้า อ.เขาย้อย (ความเร็ว 60 กม./ชม.)
-            </div>
-            <div style="font-size: 3rem; animation: pulse 2s infinite;">🚚 💨 --------------------> 🪵</div>
+            ${enRouteTruck ? `
+              <div style="position: absolute; top: 15px; left: 20px; font-size: 0.8rem; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px; color: #10b981;">
+                🟢 ${enRouteTruck.id} (ทะเบียน ${enRouteTruck.plate}) ➔ ${enRouteTruck.currentLocation}
+              </div>
+              <div style="font-size: 3rem; animation: pulse 2s infinite;">🚚 💨 --------------------> 🪵</div>
+            ` : `
+              <div style="text-align: center; color: var(--text-dim); font-size: 0.88rem;">
+                <div style="font-size: 2rem; margin-bottom: 5px;">🚚</div>
+                ไม่มีรถอยู่ระหว่างเดินทางส่งของ (พร้อมให้บริการ ${trucks.filter(t=>t.status==='Available').length} คัน)
+              </div>
+            `}
           </div>
         </div>
       </div>
@@ -95,9 +104,15 @@ window.Modules.logistics_calculator_bind = function() {
 };
 
 window.Modules.logistics_calcFee = function() {
-  const km = parseFloat(document.getElementById('logistics-dist-km')?.value || 0);
+  const kmInput = document.getElementById('logistics-dist-km');
   const resultBox = document.getElementById('logistics-fee-result');
   if (!resultBox) return;
+
+  const km = parseFloat(kmInput?.value || 0);
+  if (!kmInput || !kmInput.value || km <= 0) {
+    resultBox.innerHTML = `<div style="font-size: 0.88rem; color: var(--text-muted);">กรอกระยะทางกิโลเมตรด้านบนเพื่อคำนวณค่าจัดส่งประเมิน</div>`;
+    return;
+  }
 
   const baseFree = 5;
   const ratePerKm = 15;
@@ -134,20 +149,20 @@ window.Modules.logistics_openDispatchModal = function() {
       </div>
 
       <div class="form-group">
-        <label class="form-label">ระบุทะเบียนรถ:</label>
-        <input type="text" id="dispatch-plate" class="form-control" value="82-9999 เพชรบุรี">
+        <label class="form-label">ระบุทะเบียนรถ: <span style="color: red;">*</span></label>
+        <input type="text" id="dispatch-plate" class="form-control" placeholder="เช่น 82-1234 เพชรบุรี">
       </div>
 
       <div class="form-group">
-        <label class="form-label">เลือกพนักงานขับรถ:</label>
-        <input type="text" id="dispatch-driver" class="form-control" value="นายสมนึก ขยันขับ">
+        <label class="form-label">เลือกพนักงานขับรถ: <span style="color: red;">*</span></label>
+        <input type="text" id="dispatch-driver" class="form-control" placeholder="เช่น นายสมศักดิ์ ขยันขับ">
       </div>
 
       <div class="form-group">
         <label class="form-label" style="color: #67e8f9; font-weight: 700;">เลือกพนักงานติดตามจัดส่ง (เลือกได้ตั้งแต่ 0 ถึง 10 คน):</label>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.82rem; max-height: 180px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px;">
-          ${allAvailableHelpers.map((h, i) => `
-            <label><input type="checkbox" class="dispatch-helper-chk" ${i < 3 ? 'checked' : ''} value="${h}"> ${h}</label>
+          ${allAvailableHelpers.map((h) => `
+            <label><input type="checkbox" class="dispatch-helper-chk" value="${h}"> ${h}</label>
           `).join('')}
         </div>
       </div>
@@ -165,13 +180,18 @@ window.Modules.logistics_submitDispatch = function() {
   const driver = document.getElementById('dispatch-driver')?.value;
   const type = document.getElementById('dispatch-truck-type')?.value;
 
+  if (!plate || !driver) {
+    AppEngine.showToast('กรุณาระบุทะเบียนรถและพนักงานขับรถ', 'danger');
+    return;
+  }
+
   const selectedHelpers = [];
   document.querySelectorAll('.dispatch-helper-chk:checked').forEach(chk => {
     selectedHelpers.push(chk.value);
   });
 
   const newTruck = {
-    id: `TRK-0${window.AppStore.data.trucks.length + 1}`,
+    id: `TRK-0${(window.AppStore.data.trucks || []).length + 1}`,
     plate: plate,
     type: type,
     driver: driver,
@@ -204,7 +224,7 @@ window.Modules.logistics_openPhotoPODModal = function(truckId) {
       <div class="photo-pod-container">
         <div style="font-size: 3rem;">📸</div>
         <p style="font-size: 0.85rem; color: var(--text-muted);">ถ่ายรูปหรือแนบภาพถ่ายสินค้าที่จัดส่งถึงไซต์งานสำเร็จแล้ว</p>
-        <button class="btn btn-sm btn-primary" style="margin-top: 10px;" onclick="Modules.logistics_simulatePhotoUpload()">📷 จำลองถ่ายรูปจากมือถือพนักงานส่งของ</button>
+        <button class="btn btn-sm btn-primary" style="margin-top: 10px;" onclick="Modules.logistics_simulatePhotoUpload()">📷 แนบรูปถ่ายจากพนักงานส่งของ</button>
         <div id="pod-photo-preview-box"></div>
       </div>
     </div>
@@ -223,7 +243,7 @@ window.Modules.logistics_simulatePhotoUpload = function() {
       <div style="margin-top: 15px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; border: 1px solid #10b981;">
         <div style="font-size: 0.8rem; color: #10b981; font-weight: 600;">✅ แนบรูปถ่ายสำเร็จ: photo_wood_delivery_site.jpg</div>
         <div style="height: 120px; background: #1e293b; border-radius: 6px; margin-top: 5px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #94a3b8;">
-          [รูปถ่ายไม้ฝาเฌอร่าและไม้พื้นลงที่ไซต์งาน อ.เขาย้อย]
+          [รูปถ่ายสินค้าจัดส่งถึงไซต์งาน]
         </div>
       </div>
     `;

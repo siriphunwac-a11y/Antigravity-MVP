@@ -1,5 +1,6 @@
 // ==========================================
 // Finance, Accounting & AR Payment Due Alert System
+// (บริษัท น้ำเพชรค้าไม้ จำกัด)
 // ==========================================
 
 window.Modules = window.Modules || {};
@@ -7,6 +8,15 @@ window.Modules = window.Modules || {};
 window.Modules.accounting = function() {
   const store = window.AppStore.data;
   const bills = store.arBills || [];
+
+  const dueTodayBills = bills.filter(b => b.status === 'DUE_TODAY');
+  const dueSoonBills = bills.filter(b => b.status === 'DUE_SOON');
+  const totalArRemaining = bills.reduce((acc, b) => acc + (b.remainingAmount || 0), 0);
+
+  // Dynamic VAT Output & Input from real Sales Orders & Purchase Orders
+  const vatOutput = (store.salesOrders || []).reduce((acc, o) => acc + (o.vatAmount || 0), 0);
+  const vatInput = (store.purchaseOrders || []).reduce((acc, p) => acc + (p.vatAmount || 0), 0);
+  const vatNet = vatOutput - vatInput;
 
   return `
     <div class="accounting-module">
@@ -22,17 +32,31 @@ window.Modules.accounting = function() {
           ระบบจะทำการแจ้งเตือนล่วงหน้า <strong>1 วัน ก่อนถึงกำหนดชำระ</strong> และส่งการแจ้งเตือนด่วนใน <strong>เวลา 08:00 น. ของวันที่ต้องชำระจริง</strong>
         </p>
 
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <div style="background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; padding: 10px 15px; border-radius: 8px; flex: 1;">
-            <div style="font-weight: 700; color: #f43f5e; font-size: 0.85rem;">🔔 แจ้งเตือนวันชำระจริง (เวลา 08:00 น. วันนี้):</div>
-            <div style="font-size: 0.88rem; font-weight: 600; margin-top: 4px;">คุณอนันต์ - บิล INV-2026-0805 (ยอดคงเหลือ ฿220,000)</div>
+        ${bills.length === 0 ? `
+          <div style="background: rgba(0,0,0,0.2); padding: 12px 15px; border-radius: 8px; text-align: center; color: var(--text-muted); font-size: 0.88rem;">
+            🟢 ไม่มีรายการลูกหนี้ค้างชำระในระบบ (0 รายการ)
           </div>
+        ` : `
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <div style="background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; padding: 10px 15px; border-radius: 8px; flex: 1;">
+              <div style="font-weight: 700; color: #f43f5e; font-size: 0.85rem;">🔔 แจ้งเตือนวันชำระจริง (เวลา 08:00 น. วันนี้):</div>
+              <div style="font-size: 0.88rem; font-weight: 600; margin-top: 4px;">
+                ${dueTodayBills.length > 0 
+                  ? dueTodayBills.map(b => `${b.customerName} - บิล ${b.billNo} (คงเหลือ ฿${AppEngine.formatCurrency(b.remainingAmount)})`).join('<br>')
+                  : 'ไม่มีรายการครบกำหนดวันนี้'}
+              </div>
+            </div>
 
-          <div style="background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; padding: 10px 15px; border-radius: 8px; flex: 1;">
-            <div style="font-weight: 700; color: #f59e0b; font-size: 0.85rem;">⚠️ แจ้งเตือนก่อนถึงวันจ่าย 1 วัน (ครบกำหนดพรุ่งนี้):</div>
-            <div style="font-size: 0.88rem; font-weight: 600; margin-top: 4px;">หจก. ศิริการช่าง - บิล INV-2026-0801 (ยอดคงเหลือ ฿135,000)</div>
+            <div style="background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; padding: 10px 15px; border-radius: 8px; flex: 1;">
+              <div style="font-weight: 700; color: #f59e0b; font-size: 0.85rem;">⚠️ แจ้งเตือนก่อนถึงวันจ่าย 1 วัน (ครบกำหนดพรุ่งนี้):</div>
+              <div style="font-size: 0.88rem; font-weight: 600; margin-top: 4px;">
+                ${dueSoonBills.length > 0 
+                  ? dueSoonBills.map(b => `${b.customerName} - บิล ${b.billNo} (คงเหลือ ฿${AppEngine.formatCurrency(b.remainingAmount)})`).join('<br>')
+                  : 'ไม่มีรายการครบกำหนดพรุ่งนี้'}
+              </div>
+            </div>
           </div>
-        </div>
+        `}
       </div>
 
       <!-- AR Bills Management Table -->
@@ -57,6 +81,7 @@ window.Modules.accounting = function() {
               </tr>
             </thead>
             <tbody>
+              ${bills.length === 0 ? '<tr><td colspan="9" style="text-align: center; color: var(--text-dim); padding: 30px;">ไม่มีรายการลูกหนี้การค้าในระบบ</td></tr>' : ''}
               ${bills.map(b => `
                 <tr>
                   <td style="font-weight: 700; color: var(--accent-cyan-light);">${b.billNo}</td>
@@ -96,16 +121,16 @@ window.Modules.accounting = function() {
           <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
               <span>ภาษีขาย (VAT Output 7%):</span>
-              <span style="color: #67e8f9; font-weight: 700;">฿74,500</span>
+              <span style="color: #67e8f9; font-weight: 700;">฿${AppEngine.formatCurrency(vatOutput)}</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
               <span>ภาษีซื้อ (VAT Input 7%):</span>
-              <span style="color: #10b981; font-weight: 700;">-฿42,100</span>
+              <span style="color: #10b981; font-weight: 700;">-฿${AppEngine.formatCurrency(vatInput)}</span>
             </div>
             <hr style="border-color: rgba(255,255,255,0.1); margin: 8px 0;">
             <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.05rem;">
               <span>ภาษีที่ต้องนำส่ง ภ.พ.30 สุทธิ:</span>
-              <span style="color: #f59e0b;">฿32,400</span>
+              <span style="color: #f59e0b;">฿${AppEngine.formatCurrency(vatNet)}</span>
             </div>
           </div>
         </div>
@@ -117,15 +142,15 @@ window.Modules.accounting = function() {
           <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem;">
             <div style="display: flex; justify-content: space-between;">
               <span>0 - 30 วัน (ปกติ):</span>
-              <span style="color: #10b981; font-weight: 700;">฿355,000 (100%)</span>
+              <span style="color: #10b981; font-weight: 700;">฿${AppEngine.formatCurrency(totalArRemaining)} (${bills.length > 0 ? '100%' : '0%'})</span>
             </div>
             <div style="display: flex; justify-content: space-between;">
               <span>31 - 60 วัน (ติดตามใกล้ชิด):</span>
-              <span>฿0 (0%)</span>
+              <span>฿0.00 (0%)</span>
             </div>
             <div style="display: flex; justify-content: space-between;">
               <span>61 - 90+ วัน (หนี้เสีย/เกินกำหนด):</span>
-              <span style="color: #f43f5e; font-weight: 700;">฿0 (0%)</span>
+              <span style="color: #f43f5e; font-weight: 700;">฿0.00 (0%)</span>
             </div>
           </div>
         </div>
@@ -145,6 +170,5 @@ window.Modules.accounting_payBill = function(billNo) {
 
   window.AppStore.save();
   AppEngine.showToast(`รับชำระเงินบิล ${billNo} ครบถ้วน! ตัดหนี้สำเร็จ`, 'success');
-  AppEngine.checkARPaymentAlerts();
   AppEngine.loadModule('accounting');
 };

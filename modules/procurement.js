@@ -8,6 +8,7 @@ window.Modules = window.Modules || {};
 window.Modules.procurement = function() {
   const store = window.AppStore.data;
   const pos = store.purchaseOrders || [];
+  const products = store.products || [];
 
   return `
     <div class="procurement-module">
@@ -32,6 +33,7 @@ window.Modules.procurement = function() {
               </tr>
             </thead>
             <tbody>
+              ${pos.length === 0 ? '<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 35px;">ยังไม่มีใบสั่งซื้อ (PO) ในระบบ (0 รายการ)</td></tr>' : ''}
               ${pos.map(po => `
                 <tr>
                   <td style="font-weight: 700; color: var(--accent-cyan-light);">${po.poNo}</td>
@@ -70,18 +72,15 @@ window.Modules.procurement = function() {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>บจก. เอสซีจี ซิเมนต์ฯ</td>
-                  <td>60 วัน</td>
-                  <td style="color: #10b981;">98.5%</td>
-                  <td><span class="badge badge-success">Grade A+</span></td>
-                </tr>
-                <tr>
-                  <td>บมจ. ทีโอเอ เพ้นท์</td>
-                  <td>45 วัน</td>
-                  <td style="color: #10b981;">96.0%</td>
-                  <td><span class="badge badge-success">Grade A</span></td>
-                </tr>
+                ${pos.length === 0 ? '<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">ยังไม่มีประวัติการประเมิน Supplier</td></tr>' : ''}
+                ${Array.from(new Set(pos.map(p => p.supplier))).map(sup => `
+                  <tr>
+                    <td style="font-weight: 600;">${sup}</td>
+                    <td>30 วัน</td>
+                    <td style="color: #10b981;">100.0%</td>
+                    <td><span class="badge badge-success">Grade A+</span></td>
+                  </tr>
+                `).join('')}
               </tbody>
             </table>
           </div>
@@ -92,14 +91,16 @@ window.Modules.procurement = function() {
             <div class="card-title">📈 ประวัติราคาปูนและไม้แปรรูปย้อนหลัง 6 เดือน</div>
           </div>
           <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; font-size: 0.85rem;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-              <span>ไม้ฝาเฌอร่า 15x300 ซม. (ต่อแผ่น):</span>
-              <span style="color: #10b981; font-weight: 700;">฿65 ➔ ฿68 ➔ ฿68</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-              <span>ปูนเสือ 50 กก. (ต่อถุง):</span>
-              <span style="color: #67e8f9; font-weight: 700;">฿110 ➔ ฿112 ➔ ฿115</span>
-            </div>
+            ${products.length === 0 ? `
+              <p style="color: var(--text-dim); text-align: center; margin: 0;">ยังไม่มีข้อมูลประวัติราคาวัสดุในระบบ</p>
+            ` : `
+              ${products.slice(0, 3).map(p => `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                  <span>${p.name} (ต่อ${p.unit}):</span>
+                  <span style="color: #10b981; font-weight: 700;">฿${p.price}</span>
+                </div>
+              `).join('')}
+            `}
           </div>
         </div>
       </div>
@@ -108,33 +109,37 @@ window.Modules.procurement = function() {
 };
 
 window.Modules.procurement_openNewPOModal = function() {
+  const products = window.AppStore.data.products || [];
+
   const html = `
     <div>
       <div class="form-group">
-        <label class="form-label">เลือกซัพพลายเออร์ (Supplier):</label>
-        <select class="form-select" id="po-supplier-select">
-          <option>บริษัท เอสซีจี ซิเมนต์-ผลิตภัณฑ์ก่อสร้าง จำกัด</option>
-          <option>บริษัท ทีโอเอ เพ้นท์ (ประเทศไทย) จำกัด (มหาชน)</option>
-          <option>บริษัท ทีพีไอ โพลีน จำกัด (มหาชน)</option>
-        </select>
+        <label class="form-label">ระบุชื่อซัพพลายเออร์ (Supplier): <span style="color: red;">*</span></label>
+        <input type="text" id="po-supplier-input" class="form-control" placeholder="เช่น บจก. เอสซีจี ซิเมนต์, บมจ. ทีโอเอ เพ้นท์">
       </div>
 
       <div class="form-group">
-        <label class="form-label">รายการสินค้าสั่งซื้อ:</label>
-        <select class="form-select" id="po-sku-select">
-          <option value="WOD-001">ไม้ฝาเฌอร่า/SCG 15x300 ซม. (ต้นทุน ฿68/แผ่น)</option>
-          <option value="CEM-001">ปูนซีเมนต์ผสม SCG ซูเปอร์เสือ 50 กก. (ต้นทุน ฿115/ถุง)</option>
-        </select>
+        <label class="form-label">รายการสินค้าสั่งซื้อ (SKU):</label>
+        ${products.length === 0 ? `
+          <div style="background: rgba(245, 158, 11, 0.15); padding: 10px; border-radius: 6px; font-size: 0.82rem; color: #f59e0b; margin-bottom: 8px;">
+            ⚠️ คลังสินค้ายังไม่มี SKU สินค้า คุณสามารถพิมพ์ชื่อสินค้าสั่งซื้อด้านล่างได้โดยตรง
+          </div>
+          <input type="text" id="po-custom-item" class="form-control" placeholder="ระบุชื่อรายการวัสดุก่อสร้างที่ต้องการสั่งซื้อ">
+        ` : `
+          <select class="form-select" id="po-sku-select">
+            ${products.map(p => `<option value="${p.sku}">${p.name} (SKU: ${p.sku})</option>`).join('')}
+          </select>
+        `}
       </div>
 
       <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
         <div class="form-group">
           <label class="form-label">จำนวนที่สั่งซื้อ:</label>
-          <input type="number" id="po-qty" class="form-control" value="200">
+          <input type="number" id="po-qty" class="form-control" placeholder="กรอกจำนวน">
         </div>
         <div class="form-group">
           <label class="form-label">ราคาต้นทุน (บาท/หน่วย):</label>
-          <input type="number" id="po-cost" class="form-control" value="68">
+          <input type="number" id="po-cost" class="form-control" placeholder="กรอกราคาต้นทุนต่อหน่วย">
         </div>
       </div>
 
@@ -151,17 +156,17 @@ window.Modules.procurement_openNewPOModal = function() {
       <div id="po-pay-details-box" style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
         <div id="po-field-bank" style="display: none;">
           <label class="form-label">ระบุเลขที่บัญชี / ชื่อบัญชี Supplier ที่โอนเข้า:</label>
-          <input type="text" id="po-bank-acc" class="form-control" value="ธ.กสิกรไทย 012-3-45678-9 (บจก. เอสซีจี)">
+          <input type="text" id="po-bank-acc" class="form-control" placeholder="ระบุเลขที่บัญชีธนาคาร">
         </div>
         <div id="po-field-cheque">
           <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div>
               <label class="form-label">ระบุเลขที่เช็ค:</label>
-              <input type="text" id="po-cheque-no" class="form-control" value="CHQ-887799">
+              <input type="text" id="po-cheque-no" class="form-control" placeholder="เช่น CHQ-887799">
             </div>
             <div>
               <label class="form-label">วันที่ลงในเช็ค:</label>
-              <input type="date" id="po-cheque-date" class="form-control" value="2026-08-30">
+              <input type="date" id="po-cheque-date" class="form-control">
             </div>
           </div>
         </div>
@@ -169,7 +174,7 @@ window.Modules.procurement_openNewPOModal = function() {
 
       <div class="form-group">
         <label class="form-label">กำหนดวันส่งมอบสินค้า:</label>
-        <input type="date" id="po-delivery-date" class="form-control" value="2026-08-22">
+        <input type="date" id="po-delivery-date" class="form-control">
       </div>
     </div>
   `;
@@ -189,11 +194,21 @@ window.Modules.procurement_togglePayFields = function(val) {
 };
 
 window.Modules.procurement_submitPO = function() {
-  const supplier = document.getElementById('po-supplier-select')?.value;
-  const qty = parseInt(document.getElementById('po-qty')?.value || 100);
-  const cost = parseFloat(document.getElementById('po-cost')?.value || 100);
-  const delDate = document.getElementById('po-delivery-date')?.value || '2026-08-22';
+  const supplier = document.getElementById('po-supplier-input')?.value || 'ซัพพลายเออร์';
+  const qty = parseInt(document.getElementById('po-qty')?.value || 0);
+  const cost = parseFloat(document.getElementById('po-cost')?.value || 0);
+  const delDate = document.getElementById('po-delivery-date')?.value || new Date().toISOString().slice(0,10);
   const payMethod = document.getElementById('po-payment-method')?.value || 'CASH';
+
+  if (!supplier.trim()) {
+    AppEngine.showToast('กรุณาระบุชื่อซัพพลายเออร์ Supplier', 'danger');
+    return;
+  }
+
+  if (qty <= 0 || cost <= 0) {
+    AppEngine.showToast('กรุณาระบุจำนวนและราคาต้นทุนให้ถูกต้อง', 'danger');
+    return;
+  }
 
   let payLabel = 'เงินสด';
   if (payMethod === 'BANK_TRANSFER') {
@@ -225,6 +240,7 @@ window.Modules.procurement_printPO = function(poNo) {
   const store = window.AppStore.data;
   const company = store.companyInfo;
   const po = store.purchaseOrders.find(x => x.poNo === poNo) || store.purchaseOrders[0];
+  if (!po) return;
 
   const html = `
     <div class="printable-document" style="background: #fff; color: #000; padding: 25px; font-family: 'Prompt', sans-serif; font-size: 0.82rem; border: 1px solid #ccc;">
@@ -269,9 +285,9 @@ window.Modules.procurement_printPO = function(poNo) {
         <tbody>
           <tr>
             <td style="padding: 6px; text-align: center;">1</td>
-            <td style="padding: 6px;">[WOD-001] ไม้ฝาเฌอร่า/SCG 15x300 ซม. (เกรด A)</td>
-            <td style="padding: 6px; text-align: center;">200 แผ่น</td>
-            <td style="padding: 6px; text-align: right;">฿68.00</td>
+            <td style="padding: 6px;">รายการวัสดุก่อสร้างตาม PO</td>
+            <td style="padding: 6px; text-align: center;">1 รายการ</td>
+            <td style="padding: 6px; text-align: right;">฿${AppEngine.formatCurrency(po.totalAmount)}</td>
             <td style="padding: 6px; text-align: right;">฿${AppEngine.formatCurrency(po.totalAmount)}</td>
           </tr>
         </tbody>
