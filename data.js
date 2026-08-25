@@ -14,19 +14,13 @@ window.InitialAppData = {
     branch: "สำนักงานใหญ่ (00000)"
   },
 
-  // 2. User Accounts System (ระบบบัญชีผู้ใช้งานแยกตามสิทธิ์)
+  // 2. User Accounts System (ระบบบัญชีผู้ใช้งานส่วนบุคคล)
   users: [
     { username: 'admin', password: '123', name: 'นายสมศักดิ์ (หัวหน้างาน / ผู้จัดการ)', role: 'supervisor', avatar: '👨‍💼' },
     { username: 'cashier1', password: '123', name: 'นายสมชาย (พนักงานขาย / POS 1)', role: 'cashier', avatar: '🧑‍💻' },
     { username: 'cashier2', password: '123', name: 'นางสาววิภาดา (พนักงานขาย / POS 2)', role: 'cashier', avatar: '👩‍💻' }
   ],
-  currentUser: {
-    username: 'admin',
-    name: 'นายสมศักดิ์ (หัวหน้างาน / ผู้จัดการ)',
-    role: 'supervisor',
-    avatar: '👨‍💼',
-    isLoggedIn: true
-  },
+  currentUser: null,
 
   // 3. Product Categories List
   categories: [
@@ -42,7 +36,7 @@ window.InitialAppData = {
     { id: 'electric', name: 'งานไฟฟ้า & อุปกรณ์', icon: '⚡' }
   ],
 
-  // 4. Products Master Database (Default Clean Empty Array for Production Launch)
+  // 4. Products Master Database (Default Clean Empty Array)
   products: [],
 
   // 5. Cashiers List
@@ -63,10 +57,7 @@ window.InitialAppData = {
   stockLogs: [],
 
   // 8. Trucks Fleet
-  trucks: [
-    { id: "TRK-01", plate: "82-1234 เพชรบุรี", type: "รถ 6 ล้อขนส่งไม้ (8 ตัน)", driver: "นายสมศักดิ์ ขยันขับ", helpers: ["นายสมชาย ดีงาม", "นายสมศักดิ์ ขยันงาน"], status: "Available", currentLocation: "คลังสินค้า อ.เขาย้อย" },
-    { id: "TRK-02", plate: "82-5678 เพชรบุรี", type: "รถ 10 ล้อ พร้อมเครนยก (15 ตัน)", driver: "นายวิชัย ใจดี", helpers: ["นายสุรชัย แข็งแรง", "นายสายชล ช่วยยก", "นายเดชา ปลอดภัย"], status: "Available", currentLocation: "คลังสินค้า อ.เขาย้อย" }
-  ],
+  trucks: [],
 
   // 9. Purchase Orders
   purchaseOrders: [],
