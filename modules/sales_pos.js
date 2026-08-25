@@ -212,8 +212,8 @@ window.Modules.sales_pos = function() {
               <button class="btn btn-success" onclick="Modules.sales_checkout('FULL_TAX_INVOICE')">🧾 2. พิมพ์ใบกำกับภาษีเต็มรูป (Tax Invoice)</button>
               <button class="btn btn-warning" onclick="Modules.sales_checkout('CASH_SALE_WITH_HEADER')">📝 3. พิมพ์บิลเงินสด (แบบมีหัวบิล 25 แถว)</button>
               <button class="btn btn-secondary" onclick="Modules.sales_checkout('CASH_SALE_NO_HEADER')">📋 4. พิมพ์บิลเงินสด (แบบไม่มีหัวบิล - หัวบิลสำเร็จรูป)</button>
-              <button class="btn btn-primary" style="background: #3b82f6;" onclick="Modules.sales_checkout('DELIVERY_NOTE')">🚚 5. พิมพ์บิลใบส่งของ (Delivery Note)</button>
-              <button class="btn btn-secondary" style="background: #8b5cf6; color: #fff;" onclick="Modules.sales_checkout('BILLING_NOTE')">📑 6. พิมพ์ใบวางบิล (Billing Note)</button>
+              <button class="btn btn-primary" style="background: #3b82f6;" onclick="Modules.sales_checkout('DELIVERY_NOTE')">🚚 5. พิมพ์บิลใบส่งของ (เชื่อมเลขใบวางบิล & บิลอ้างอิง)</button>
+              <button class="btn btn-secondary" style="background: #8b5cf6; color: #fff;" onclick="Modules.sales_checkout('BILLING_NOTE')">📑 6. พิมพ์ใบวางบิล (เชื่อมเลขบิลใบส่งของ & ใบแจ้งหนี้)</button>
             </div>
           </div>
         </div>
@@ -306,13 +306,21 @@ window.Modules.sales_checkout = function(formType) {
   window.AppStore.save();
 
   const selectedBank = store.storeBankAccounts.find(b => b.id === cart.selectedBankId) || store.storeBankAccounts[0];
-  const docNo = `DOC-2026-${Math.floor(Math.random()*9000 + 1000)}`;
+  
+  // GENERATE LINKED CROSS-DOCUMENT REFERENCE NUMBERS
+  const randomSerial = Math.floor(Math.random()*9000 + 1000);
+  const docNo = `DN-2026-${randomSerial}`;               // Delivery Note Number
+  const billingNoteNo = `BN-2026-${randomSerial}`;       // Linked Billing Note Number
+  const taxInvoiceNo = `INV-2026-${randomSerial}`;       // Linked Tax Invoice Number
+  const quotationNo = `QO-2026-${randomSerial}`;         // Linked Quotation Number
+  const cashSaleNo = `CS-2026-${randomSerial}`;           // Linked Cash Sale Number
+
   const todayStr = new Date().toLocaleDateString('th-TH');
   const validUntilStr = new Date(Date.now() + 14*24*60*60*1000).toLocaleDateString('th-TH');
 
   let documentHtml = '';
 
-  // 1. QUOTATION (ใบเสนอราคา - Based on Picture 1)
+  // 1. QUOTATION (ใบเสนอราคา)
   if (formType === 'QUOTATION') {
     documentHtml = `
       <div class="printable-document" style="background: #fff; color: #000; padding: 25px; font-family: 'Prompt', sans-serif; font-size: 0.82rem; border: 1px solid #ccc;">
@@ -336,7 +344,9 @@ window.Modules.sales_checkout = function(formType) {
             <div><strong>เลขผู้เสียภาษี / Tax ID:</strong> ${cart.customerTaxId}</div>
           </div>
           <div>
-            <div><strong>เลขที่ / No.:</strong> ${docNo}</div>
+            <div><strong>เลขที่ / No.:</strong> <strong style="color: #06b6d4;">${quotationNo}</strong></div>
+            <div><strong>อ้างอิงเลขที่ใบวางบิล:</strong> <strong style="color: #8b5cf6;">${billingNoteNo}</strong></div>
+            <div><strong>อ้างอิงบิลใบส่งของ:</strong> <strong style="color: #3b82f6;">${docNo}</strong></div>
             <div><strong>วันที่ / Issue Date:</strong> ${todayStr}</div>
             <div><strong>ใช้ได้ถึง / Valid Until:</strong> ${validUntilStr}</div>
           </div>
@@ -385,6 +395,10 @@ window.Modules.sales_checkout = function(formType) {
           </div>
         </div>
 
+        <div style="background: #f8fafc; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; border: 1px solid #e2e8f0; margin-bottom: 15px;">
+          🔍 <strong>การเชื่อมโยงระบบเอกสาร (Audit Link):</strong> ใบเสนอราคานี้เชื่อมต่ออ้างอิงล่วงหน้ากับ <strong>ใบวางบิล (${billingNoteNo})</strong> และ <strong>บิลใบส่งของ (${docNo})</strong>
+        </div>
+
         <div style="display: flex; justify-content: space-between; margin-top: 25px; text-align: center; font-size: 0.78rem;">
           <div>
             <div>..........................................................</div>
@@ -403,7 +417,7 @@ window.Modules.sales_checkout = function(formType) {
     `;
   }
 
-  // 2. FULL TAX INVOICE (ใบกำกับภาษีเต็มรูป - Title in 1 line, Phone under Tax ID)
+  // 2. FULL TAX INVOICE (ใบกำกับภาษีเต็มรูป)
   else if (formType === 'FULL_TAX_INVOICE') {
     documentHtml = `
       <div class="printable-document" style="background: #fff; color: #000; padding: 25px; font-family: 'Prompt', sans-serif; font-size: 0.82rem; border: 1px solid #ccc;">
@@ -426,7 +440,9 @@ window.Modules.sales_checkout = function(formType) {
             <div><strong>เลขผู้เสียภาษี:</strong> ${cart.customerTaxId}</div>
           </div>
           <div>
-            <div><strong>เลขที่ใบกำกับภาษี:</strong> ${docNo}</div>
+            <div><strong>เลขที่ใบกำกับภาษี:</strong> <strong style="color: #06b6d4;">${taxInvoiceNo}</strong></div>
+            <div><strong>อ้างอิงเลขที่ใบวางบิล:</strong> <strong style="color: #8b5cf6;">${billingNoteNo}</strong></div>
+            <div><strong>อ้างอิงบิลใบส่งของ:</strong> <strong style="color: #3b82f6;">${docNo}</strong></div>
             <div><strong>วันที่:</strong> ${todayStr}</div>
             <div><strong>ผู้ขาย:</strong> ${cart.selectedCashierId}</div>
           </div>
@@ -475,6 +491,10 @@ window.Modules.sales_checkout = function(formType) {
           </div>
         </div>
 
+        <div style="background: #f8fafc; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; border: 1px solid #e2e8f0; margin-bottom: 15px;">
+          🔍 <strong>การเชื่อมโยงระบบเอกสาร (Audit Link):</strong> ใบกำกับภาษีนี้ผูกกับ <strong>ใบวางบิล (${billingNoteNo})</strong> และ <strong>บิลใบส่งของ (${docNo})</strong>
+        </div>
+
         <div style="display: flex; justify-content: space-between; margin-top: 20px; text-align: center; font-size: 0.78rem;">
           <div>
             <div>......................................................</div>
@@ -517,12 +537,13 @@ window.Modules.sales_checkout = function(formType) {
             <div style="text-align: right;">
               <h2 style="margin: 0; font-size: 1.3rem;">บิลเงินสด</h2>
               <div style="font-size: 0.75rem; color: #555;">CASHSALE / 現兌單</div>
-              <div style="font-size: 0.75rem;">เล่มที่ ......... เลขที่ <strong>${docNo}</strong></div>
+              <div style="font-size: 0.75rem;">เล่มที่ ......... เลขที่ <strong>${cashSaleNo}</strong></div>
+              <div style="font-size: 0.72rem; color: #666;">อ้างอิงใบวางบิล: <strong>${billingNoteNo}</strong> | ใบส่งของ: <strong>${docNo}</strong></div>
             </div>
           </div>
         ` : `
           <div style="text-align: right; margin-bottom: 6px;">
-            <span style="font-size: 1.1rem; font-weight: 700;">บิลเงินสด (CASHSALE)</span> | เลขที่ <strong>${docNo}</strong>
+            <span style="font-size: 1.1rem; font-weight: 700;">บิลเงินสด (CASHSALE)</span> | เลขที่ <strong>${cashSaleNo}</strong> (อ้างอิงใบวางบิล: ${billingNoteNo})
           </div>
         `}
 
@@ -572,10 +593,11 @@ window.Modules.sales_checkout = function(formType) {
     `;
   }
 
-  // 5. DELIVERY NOTE (บิลใบส่งของ)
+  // 5. DELIVERY NOTE (บิลใบส่งของ - WITH LINKED BILLING NOTE REFERENCE)
   else if (formType === 'DELIVERY_NOTE') {
     documentHtml = `
       <div class="printable-document" style="background: #fff; color: #000; padding: 25px; font-family: 'Prompt', sans-serif; font-size: 0.82rem; border: 1px solid #ccc;">
+        <!-- Header -->
         <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-bottom: 12px;">
           <div>
             <h2 style="margin: 0; color: #3b82f6; font-size: 1.4rem;">${company.name}</h2>
@@ -585,24 +607,29 @@ window.Modules.sales_checkout = function(formType) {
           </div>
           <div style="text-align: right;">
             <h2 style="margin: 0; color: #111; font-size: 1.3rem;">ใบส่งของ / Delivery Note</h2>
-            <div style="font-size: 0.8rem; color: #666;">เลขที่: <strong>${docNo}</strong></div>
+            <div style="font-size: 0.85rem; color: #3b82f6; font-weight: 700;">เลขที่บิลใบส่งของ: <strong>${docNo}</strong></div>
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px; margin-bottom: 12px; background: #f8fafc; padding: 8px; border-radius: 6px;">
+        <!-- Linked Document Audit Reference Box -->
+        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px; margin-bottom: 12px; background: #eff6ff; padding: 10px; border-radius: 6px; border: 1px solid #bfdbfe;">
           <div>
-            <div><strong>สถานที่จัดส่ง:</strong> ${cart.customerName} (${cart.customerAddress})</div>
+            <div><strong>สถานที่จัดส่ง:</strong> ${cart.customerName}</div>
+            <div><strong>ที่อยู่จัดส่ง:</strong> ${cart.customerAddress}</div>
             <div><strong>ระยะทางจัดส่ง:</strong> ${cart.deliveryMode === 'SELF_PICKUP' ? 'รับเองหน้าร้าน' : cart.distanceKm + ' กม.'}</div>
           </div>
           <div>
+            <div><strong>🔗 อ้างอิงเลขที่ใบวางบิล:</strong> <strong style="color: #8b5cf6; font-size: 0.9rem;">${billingNoteNo}</strong></div>
+            <div><strong>📄 อ้างอิงใบกำกับภาษี / บิล:</strong> <strong style="color: #06b6d4;">${taxInvoiceNo}</strong></div>
+            <div><strong>📝 อ้างอิงใบเสนอราคา:</strong> ${quotationNo}</div>
             <div><strong>วันที่ส่งของ:</strong> ${todayStr}</div>
-            <div><strong>พนักงานจัดส่ง:</strong> พนักงานขับรถ + พนักงานติดตาม</div>
           </div>
         </div>
 
+        <!-- Delivery Line Items -->
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;" border="1" borderColor="#ddd">
           <thead>
-            <tr style="background: #eff6ff; text-align: left;">
+            <tr style="background: #dbeafe; text-align: left;">
               <th style="padding: 6px; text-align: center;">ลำดับ</th>
               <th style="padding: 6px;">รหัสสินค้า SKU</th>
               <th style="padding: 6px;">รายการสินค้าที่จัดส่ง</th>
@@ -623,7 +650,13 @@ window.Modules.sales_checkout = function(formType) {
           </tbody>
         </table>
 
-        <div style="display: flex; justify-content: space-between; margin-top: 30px; text-align: center; font-size: 0.78rem;">
+        <!-- Audit Traceability Footer Note -->
+        <div style="background: #f1f5f9; padding: 8px 12px; border-radius: 6px; font-size: 0.78rem; border: 1px solid #cbd5e1; margin-bottom: 20px;">
+          🔍 <strong>การสืบย้อนข้อมูลการซื้อขาย (Audit Traceability):</strong><br>
+          บิลใบส่งของฉบับนี้ถูกเชื่อมโยงระบบย้อนหลังกับ <strong>ใบวางบิล เลขที่ ${billingNoteNo}</strong> และ <strong>ใบกำกับภาษี/ใบแจ้งหนี้ เลขที่ ${taxInvoiceNo}</strong> สามารถใช้ตรวจสอบประวัติการซื้อขาย รายการวัสดุ และยอดชำระเงินย้อนหลังได้ 100%
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 25px; text-align: center; font-size: 0.78rem;">
           <div>
             <div>......................................................</div>
             <div>ผู้รับสินค้า ณ ไซต์งาน</div>
@@ -631,7 +664,7 @@ window.Modules.sales_checkout = function(formType) {
           </div>
           <div>
             <div>......................................................</div>
-            <div>พนักงานจัดส่งสินค้า</div>
+            <div>พนักงานจัดส่งสินค้า (${company.name})</div>
             <div>วันที่ ..... / ..... / .......</div>
           </div>
         </div>
@@ -639,10 +672,11 @@ window.Modules.sales_checkout = function(formType) {
     `;
   }
 
-  // 6. BILLING NOTE (ใบวางบิล)
+  // 6. BILLING NOTE (ใบวางบิล - WITH LINKED DELIVERY NOTE & TAX INVOICE REFERENCE)
   else {
     documentHtml = `
       <div class="printable-document" style="background: #fff; color: #000; padding: 25px; font-family: 'Prompt', sans-serif; font-size: 0.82rem; border: 1px solid #ccc;">
+        <!-- Header -->
         <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #8b5cf6; padding-bottom: 8px; margin-bottom: 12px;">
           <div>
             <h2 style="margin: 0; color: #8b5cf6; font-size: 1.4rem;">${company.name}</h2>
@@ -652,17 +686,20 @@ window.Modules.sales_checkout = function(formType) {
           </div>
           <div style="text-align: right;">
             <h2 style="margin: 0; color: #111; font-size: 1.3rem;">ใบวางบิล / Billing Note</h2>
-            <div style="font-size: 0.8rem; color: #666;">เลขที่: <strong>${docNo}</strong></div>
+            <div style="font-size: 0.85rem; color: #8b5cf6; font-weight: 700;">เลขที่ใบวางบิล: <strong>${billingNoteNo}</strong></div>
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px; margin-bottom: 12px; background: #f8fafc; padding: 8px; border-radius: 6px;">
+        <!-- Linked Metadata Block -->
+        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px; margin-bottom: 12px; background: #f5f3ff; padding: 10px; border-radius: 6px; border: 1px solid #ddd6fe;">
           <div>
             <div><strong>วางบิลแก่:</strong> ${cart.customerName}</div>
             <div><strong>ที่อยู่:</strong> ${cart.customerAddress}</div>
             <div><strong>เลขผู้เสียภาษี:</strong> ${cart.customerTaxId}</div>
           </div>
           <div>
+            <div><strong>🚚 อ้างอิงเลขที่บิลใบส่งของ:</strong> <strong style="color: #3b82f6; font-size: 0.9rem;">${docNo}</strong></div>
+            <div><strong>🧾 อ้างอิงใบกำกับภาษี / บิล:</strong> <strong style="color: #06b6d4;">${taxInvoiceNo}</strong></div>
             <div><strong>วันที่วางบิล:</strong> ${todayStr}</div>
             <div><strong>กำหนดชำระเงิน:</strong> ${validUntilStr}</div>
           </div>
@@ -670,29 +707,37 @@ window.Modules.sales_checkout = function(formType) {
 
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;" border="1" borderColor="#ddd">
           <thead>
-            <tr style="background: #f5f3ff; text-align: left;">
+            <tr style="background: #ede9fe; text-align: left;">
               <th style="padding: 6px; text-align: center;">#</th>
-              <th style="padding: 6px;">รายการบิลอ้างอิง</th>
-              <th style="padding: 6px;">วันครบกำหนด</th>
+              <th style="padding: 6px;">รายการบิล & ใบส่งของ อ้างอิง</th>
+              <th style="padding: 6px; text-align: center;">วันครบกำหนด</th>
               <th style="padding: 6px; text-align: right;">จำนวนเงินรวม</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td style="padding: 6px; text-align: center;">1</td>
-              <td style="padding: 6px;">ใบส่งของ/ใบแจ้งหนี้ เลขที่ ${docNo} (${cart.items.length} รายการวัสดุ)</td>
-              <td style="padding: 6px;">${validUntilStr}</td>
+              <td style="padding: 6px;">
+                <strong>บิลใบส่งของ เลขที่ ${docNo}</strong><br>
+                <span style="font-size: 0.75rem; color: #475569;">(อ้างอิงใบกำกับภาษี ${taxInvoiceNo} - รายการวัสดุก่อสร้าง ${cart.items.length} รายการ)</span>
+              </td>
+              <td style="padding: 6px; text-align: center;">${validUntilStr}</td>
               <td style="padding: 6px; text-align: right; font-weight: 700;">฿${AppEngine.formatCurrency(grandTotal)}</td>
             </tr>
           </tbody>
         </table>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 8px; border-radius: 6px; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 8px 12px; border-radius: 6px; margin-bottom: 15px;">
           <div>จำนวนเงินรวมทั้งสิ้น: <strong>(${bahtText(grandTotal)})</strong></div>
           <div style="font-size: 1.1rem; font-weight: 700; color: #8b5cf6;">฿${AppEngine.formatCurrency(grandTotal)}</div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; margin-top: 30px; text-align: center; font-size: 0.78rem;">
+        <div style="background: #f1f5f9; padding: 8px 12px; border-radius: 6px; font-size: 0.78rem; border: 1px solid #cbd5e1; margin-bottom: 20px;">
+          🔗 <strong>การเชื่อมโยงระบบ (Cross-Document Linking):</strong><br>
+          ใบวางบิลเลขที่ <strong>${billingNoteNo}</strong> ผูกเชื่อมกับ <strong>บิลใบส่งของ เลขที่ ${docNo}</strong> และ <strong>ใบเสนอราคา ${quotationNo}</strong> ครบถ้วน
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 25px; text-align: center; font-size: 0.78rem;">
           <div>
             <div>......................................................</div>
             <div>ผู้วางบิล (${company.name})</div>
@@ -712,5 +757,5 @@ window.Modules.sales_checkout = function(formType) {
   `);
 
   window.PosCart.items = [];
-  AppEngine.showToast(`สร้างเอกสารทางการ ${docNo} เรียบร้อย!`, 'success');
+  AppEngine.showToast(`สร้างเอกสารทางการ ${docNo} (ผูกกับใบวางบิล ${billingNoteNo}) เรียบร้อย!`, 'success');
 };

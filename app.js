@@ -1,170 +1,227 @@
 // ==========================================
-// One Stop Construction Material - Main App Engine
+// Main Application Engine & Auth Manager
+// (บริษัท น้ำเพชรค้าไม้ จำกัด)
 // ==========================================
+
+window.AppStore = {
+  key: 'namphet_construction_store_v2',
+  data: null,
+
+  init() {
+    const saved = localStorage.getItem(this.key);
+    if (saved) {
+      try {
+        this.data = JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse localStorage', e);
+        this.data = window.InitialAppData;
+      }
+    } else {
+      this.data = window.InitialAppData;
+    }
+    this.save();
+  },
+
+  save() {
+    localStorage.setItem(this.key, JSON.stringify(this.data));
+  },
+
+  reset() {
+    localStorage.removeItem(this.key);
+    this.data = window.InitialAppData;
+    this.save();
+    window.location.reload();
+  }
+};
 
 window.AppEngine = {
   currentModule: 'dashboard',
-  cart: [],
 
   init() {
+    window.AppStore.init();
+    this.checkAuthStatus();
     this.bindEvents();
-    this.renderHeaderInfo();
-    this.checkARPaymentAlerts();
+  },
+
+  // User Auth Status & Account Guard
+  checkAuthStatus() {
+    const user = window.AppStore.data.currentUser;
+    const roleDisplay = document.getElementById('user-role-display');
+
+    if (!user || !user.isLoggedIn) {
+      this.showLoginModal();
+      return;
+    }
+
+    if (roleDisplay) {
+      const isSuper = user.role === 'supervisor';
+      roleDisplay.className = `role-badge ${isSuper ? 'supervisor' : 'cashier'}`;
+      roleDisplay.innerHTML = `
+        ${user.avatar || '👤'} <strong>${user.name}</strong> 
+        <span class="badge ${isSuper ? 'badge-success' : 'badge-warning'}" style="margin-left: 6px;">${isSuper ? 'หัวหน้างาน (Supervisor)' : 'แคชเชียร์ (Cashier)'}</span>
+        <button class="btn btn-sm btn-secondary" style="margin-left: 10px; padding: 2px 8px; font-size: 0.75rem;" onclick="AppEngine.logout()">🚪 ออกจากระบบ</button>
+      `;
+    }
+
     this.loadModule(this.currentModule);
+  },
+
+  showLoginModal() {
+    const users = window.AppStore.data.users || [];
+    const html = `
+      <div style="text-align: center; padding: 10px;">
+        <div style="font-size: 3rem; margin-bottom: 10px;">🪵</div>
+        <h3 style="color: var(--accent-cyan-light); font-weight: 700; margin-bottom: 5px;">บริษัท น้ำเพชรค้าไม้ จำกัด</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
+          กรุณาเข้าสู่ระบบเลือกบัญชีผู้ใช้งานตามตำแหน่งสิทธิ์หน้าที่
+        </p>
+
+        <!-- Quick 1-Click Select Account -->
+        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: left;">
+          <label class="form-label" style="color: #67e8f9; font-weight: 700;">👤 เลือกบัญชีผู้ใช้งานที่ต้องการเข้าสู่ระบบ:</label>
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+            ${users.map(u => `
+              <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border-color); cursor: pointer;" onclick="AppEngine.loginAs('${u.username}')">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-size: 1.5rem;">${u.avatar}</span>
+                  <div>
+                    <div style="font-weight: 700; font-size: 0.9rem;">${u.name}</div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted);">Username: <strong>${u.username}</strong> | สิทธิ์: <span class="badge ${u.role === 'supervisor' ? 'badge-success' : 'badge-warning'}">${u.role === 'supervisor' ? 'หัวหน้างาน / Admin (สิทธิ์สูงสุด)' : 'พนักงานขาย / Cashier'}</span></div>
+                  </div>
+                </div>
+                <button class="btn btn-sm btn-primary">เข้าสู่ระบบ ➔</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Username/Password Login Form -->
+        <div style="text-align: left; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
+          <div class="form-group mb-2">
+            <label class="form-label">ชื่อผู้ใช้ (Username):</label>
+            <input type="text" id="login-username-input" class="form-control" placeholder="ระบุ username (เช่น admin หรือ cashier1)">
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label">รหัสผ่าน (Password):</label>
+            <input type="password" id="login-password-input" class="form-control" placeholder="ระบุรหัสผ่าน (เช่น 123)">
+          </div>
+          <button class="btn btn-primary" style="width: 100%;" onclick="AppEngine.submitLogin()">🔑 ล็อกอินเข้าสู่ระบบ</button>
+        </div>
+      </div>
+    `;
+
+    this.openModal('🔑 เข้าสู่ระบบ - บริษัท น้ำเพชรค้าไม้ จำกัด', html, '');
+    const closeBtn = document.querySelector('.modal-close');
+    if (closeBtn) closeBtn.style.display = 'none';
+  },
+
+  loginAs(username) {
+    const u = window.AppStore.data.users.find(x => x.username === username);
+    if (!u) return;
+
+    window.AppStore.data.currentUser = {
+      username: u.username,
+      name: u.name,
+      role: u.role,
+      avatar: u.avatar,
+      isLoggedIn: true
+    };
+
+    window.AppStore.save();
+    this.closeModal();
+    this.showToast(`ยินดีต้อนรับ ${u.name} เข้าสู่ระบบ!`, 'success');
+    this.checkAuthStatus();
+  },
+
+  submitLogin() {
+    const userIn = document.getElementById('login-username-input')?.value;
+    const passIn = document.getElementById('login-password-input')?.value;
+
+    const u = window.AppStore.data.users.find(x => x.username === userIn && x.password === passIn);
+    if (u) {
+      this.loginAs(u.username);
+    } else {
+      this.showToast('ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง! (ทดลองใช้ admin/123 หรือ cashier1/123)', 'danger');
+    }
+  },
+
+  logout() {
+    window.AppStore.data.currentUser = { isLoggedIn: false };
+    window.AppStore.save();
+    this.showToast('ออกจากระบบเรียบร้อยแล้ว', 'info');
+    this.checkAuthStatus();
   },
 
   bindEvents() {
-    // Navigation click handler
     document.querySelectorAll('.nav-item').forEach(item => {
       item.addEventListener('click', (e) => {
-        e.preventDefault();
-        const module = item.dataset.module;
-        if (module) {
-          this.loadModule(module);
+        const modName = item.getAttribute('data-module');
+        if (modName) {
+          document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+          item.classList.add('active');
+          this.loadModule(modName);
         }
       });
     });
-
-    // Mobile Sidebar toggle
-    const toggleBtn = document.getElementById('sidebar-toggle');
-    if (toggleBtn) {
-      toggleBtn.addEventListener('click', () => {
-        document.querySelector('.sidebar').classList.toggle('open');
-      });
-    }
-
-    // Role switcher button
-    const roleBtn = document.getElementById('role-switcher-btn');
-    if (roleBtn) {
-      roleBtn.addEventListener('click', () => {
-        this.toggleUserRole();
-      });
-    }
   },
 
-  // Switch Role between Supervisor & Cashier
-  toggleUserRole() {
-    const user = window.AppStore.data.currentUser;
-    if (user.role === 'supervisor') {
-      user.role = 'cashier';
-      user.name = 'คุณสมชาย (พนักงาน POS / Cashier)';
-      user.id = 'CS-001';
-      user.avatar = '🧑‍💻';
-      this.showToast('สลับบทบาทเป็น พนักงานหน้าร้าน (Cashier)', 'warning');
-    } else {
-      user.role = 'supervisor';
-      user.name = 'คุณสมศักดิ์ (หัวหน้างาน / Supervisor)';
-      user.id = 'SUP-001';
-      user.avatar = '👨‍💼';
-      this.showToast('สลับบทบาทเป็น หัวหน้างาน (Supervisor)', 'success');
-    }
-    window.AppStore.save();
-    this.renderHeaderInfo();
-    // Reload active module to reflect permission change
-    this.loadModule(this.currentModule);
-  },
-
-  renderHeaderInfo() {
-    const user = window.AppStore.data.currentUser;
-    const badgeEl = document.getElementById('user-role-display');
-    if (badgeEl) {
-      badgeEl.className = `role-badge ${user.role}`;
-      badgeEl.innerHTML = `${user.avatar} ${user.name}`;
-    }
-  },
-
-  // Check Payment Due Alerts (AR Payment Reminders)
-  checkARPaymentAlerts() {
-    const bills = window.AppStore.data.arBills || [];
-    const dueToday = bills.filter(b => b.status === 'DUE_TODAY');
-    const dueSoon = bills.filter(b => b.status === 'DUE_SOON');
-
-    const alertBanner = document.getElementById('payment-alert-banner');
-    if (!alertBanner) return;
-
-    if (dueToday.length > 0 || dueSoon.length > 0) {
-      let html = '';
-      if (dueToday.length > 0) {
-        html += `<div class="payment-alert due-today" style="background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #fecdd3; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
-          <div><strong>🔔 แจ้งเตือนเงินลูกหนี้ครบกำหนดชำระวันนี้ (เวลา 08:00 น.):</strong> ${dueToday.map(b => `${b.customerName} (บิล ${b.billNo}) ยอดคงเหลือ ${this.formatCurrency(b.remainingAmount)} บาท`).join(' | ')}</div>
-          <button class="btn btn-sm btn-danger" onclick="AppEngine.loadModule('accounting')">ดูรายละเอียดการเงิน</button>
-        </div>`;
-      }
-      if (dueSoon.length > 0) {
-        html += `<div class="payment-alert due-soon" style="background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fef3c7; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
-          <div><strong>⚠️ แจ้งเตือนล่วงหน้า 1 วันก่อนถึงกำหนดชำระ:</strong> ${dueSoon.map(b => `${b.customerName} (บิล ${b.billNo}) ครบกำหนด ${b.dueDateFormatted}`).join(' | ')}</div>
-          <button class="btn btn-sm btn-warning" onclick="AppEngine.loadModule('accounting')">ตรวจสอบ</button>
-        </div>`;
-      }
-      alertBanner.innerHTML = html;
-    } else {
-      alertBanner.innerHTML = '';
-    }
-  },
-
-  // Load target Module dynamically
-  loadModule(moduleName) {
-    this.currentModule = moduleName;
-
-    // Update Nav Active state
-    document.querySelectorAll('.nav-item').forEach(item => {
-      item.classList.toggle('active', item.dataset.module === moduleName);
-    });
-
-    // Update Title
-    const titleEl = document.getElementById('page-module-title');
-    const titles = {
-      dashboard: '📊 Dashboard ผู้บริหาร & KPI เปรียบเทียบยี่ห้อสินค้า',
-      product: '📦 ระบบจัดการสินค้า & Real-time Stock Matrix',
-      procurement: '📝 ระบบจัดซื้อ & ใบสั่งซื้อ Supplier (PO)',
-      warehouse: '🏭 ระบบสต๊อก & คลังสินค้า (Supervisor Lot Control)',
-      sales_pos: '🛒 ระบบขาย & POS หน้าร้าน (เลือก Cashier ID)',
-      ecommerce: '🌐 E-Commerce, Mobile App & Chat Commerce (LINE OA)',
-      boq_calculator: '🧮 เครื่องคำนวณวัสดุ & Auto-BOQ จากขนาดบ้าน',
-      logistics: '🚚 ระบบจัดคิวรถขนส่ง & Photo POD หน้างาน',
-      crm: '👑 ระบบ CRM ลูกค้า & Member Tiers',
-      accounting: '💰 ระบบการเงิน บัญชี & แจ้งเตือนชำระเงิน AR',
-      one_stop_scenario: '🏠 ตัวอย่างกระบวนการจริง (ลูกค้าสร้างบ้าน 1 หลัง)'
-    };
-    if (titleEl) {
-      titleEl.innerText = titles[moduleName] || 'One Stop Service Platform';
-    }
-
-    // Call Module Render Function if registered
+  loadModule(name) {
+    this.currentModule = name;
     const container = document.getElementById('module-content-container');
-    if (!container) return;
+    const titleEl = document.getElementById('page-module-title');
 
-    if (window.Modules && typeof window.Modules[moduleName] === 'function') {
-      container.innerHTML = window.Modules[moduleName]();
-      // Execute post render scripts if any
-      if (window.Modules[`${moduleName}_bind`]) {
-        window.Modules[`${moduleName}_bind`]();
+    const titles = {
+      dashboard: '📊 Dashboard ผู้บริหาร & KPI - บริษัท น้ำเพชรค้าไม้ จำกัด',
+      one_stop_scenario: '🌟 จำลองสถานการณ์ One Stop Service (สร้างบ้าน 1 หลัง)',
+      boq_calculator: '🧮 คำนวณ Auto-BOQ ไม้ฝา ไม้พื้น ยิปซั่ม & รั้วลวดหนาม',
+      sales_pos: '🛒 ระบบขายหน้าร้าน & POS (ออกบิล 6 รูปแบบ)',
+      ecommerce: '🌐 E-Commerce & ระบบแชทสั่งวัสดุออนไลน์',
+      product: '📦 คลังข้อมูลสินค้า & จัดการ SKU Master',
+      warehouse: '🏭 คลังสินค้า & สต๊อก Lot ต้นทุน',
+      procurement: '📝 ระบบจัดซื้อ & ใบสั่งซื้อ PO',
+      logistics: '🚚 จัดคิวรถจัดส่ง (ผู้ติดตาม 0-10 คน) & Photo POD',
+      crm: '👑 CRM ระบบสมาชิก & ยอดซื้อสะสม',
+      accounting: '💰 ระบบการเงิน บัญชี & แจ้งเตือนลูกหนี้ AR'
+    };
+
+    if (titleEl && titles[name]) {
+      titleEl.innerText = titles[name];
+    }
+
+    if (window.Modules && window.Modules[name]) {
+      container.innerHTML = window.Modules[name]();
+      if (window.Modules[`${name}_bind`]) {
+        window.Modules[`${name}_bind`]();
       }
     } else {
-      container.innerHTML = `<div class="card"><p>กำลังโหลดโมดูล ${moduleName}...</p></div>`;
+      container.innerHTML = `<div class="card"><p>ไม่พบโมดูล ${name}</p></div>`;
     }
   },
 
-  // Global Toast Notifications
-  showToast(message, type = 'info') {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
+  openModal(title, bodyHtml, footerHtml) {
+    const modal = document.getElementById('global-modal');
+    const titleEl = document.getElementById('modal-title-text');
+    const bodyEl = document.getElementById('modal-body-container');
+    const footerEl = document.getElementById('modal-footer-container');
 
+    titleEl.innerText = title;
+    bodyEl.innerHTML = bodyHtml;
+    footerEl.innerHTML = footerHtml || '<button class="btn btn-secondary" onclick="AppEngine.closeModal()">ปิด</button>';
+
+    modal.classList.add('active');
+  },
+
+  closeModal() {
+    const modal = document.getElementById('global-modal');
+    modal.classList.remove('active');
+  },
+
+  showToast(msg, type = 'info') {
+    const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.style.cssText = `
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-left: 4px solid ${type === 'success' ? '#10b981' : type === 'warning' ? '#f59e0b' : type === 'danger' ? '#f43f5e' : '#06b6d4'};
-      color: #fff;
-      padding: 12px 18px;
-      border-radius: 8px;
-      margin-top: 10px;
-      box-shadow: 0 5px 20px rgba(0,0,0,0.5);
-      font-size: 0.9rem;
-      animation: fadeIn 0.3s ease;
-    `;
-    toast.innerText = message;
+    toast.className = `badge badge-${type}`;
+    toast.style.cssText = 'padding: 12px 18px; margin-top: 10px; font-size: 0.9rem; box-shadow: 0 5px 15px rgba(0,0,0,0.5); display: block; border-radius: 8px; color: #fff; background: ' + (type === 'success' ? '#10b981' : type === 'danger' ? '#f43f5e' : type === 'warning' ? '#f59e0b' : '#06b6d4');
+    toast.innerText = msg;
     container.appendChild(toast);
 
     setTimeout(() => {
@@ -172,34 +229,15 @@ window.AppEngine = {
     }, 4000);
   },
 
-  // Global Modal Dialog Helper
-  openModal(title, bodyHtml, footerButtons = '') {
-    const modalEl = document.getElementById('global-modal');
-    if (!modalEl) return;
-
-    document.getElementById('modal-title-text').innerText = title;
-    document.getElementById('modal-body-container').innerHTML = bodyHtml;
-    document.getElementById('modal-footer-container').innerHTML = footerButtons;
-
-    modalEl.classList.add('active');
-  },
-
-  closeModal() {
-    const modalEl = document.getElementById('global-modal');
-    if (modalEl) modalEl.classList.remove('active');
-  },
-
-  // Currency & Weight formatters
   formatCurrency(num) {
-    return new Intl.NumberFormat('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num || 0);
+    return (num || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   },
 
   formatNumber(num) {
-    return new Intl.NumberFormat('th-TH').format(num || 0);
+    return (num || 0).toLocaleString('th-TH');
   }
 };
 
-// Initialize App on DOM Ready
 document.addEventListener('DOMContentLoaded', () => {
-  window.AppEngine.init();
+  AppEngine.init();
 });

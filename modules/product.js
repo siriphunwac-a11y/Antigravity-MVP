@@ -1,5 +1,6 @@
 // ==========================================
-// Product Management & Comparison Module
+// Dynamic Product & SKU Master Catalog Module
+// (บริษัท น้ำเพชรค้าไม้ จำกัด)
 // ==========================================
 
 window.Modules = window.Modules || {};
@@ -8,200 +9,327 @@ window.Modules.product = function() {
   const store = window.AppStore.data;
   const products = store.products || [];
   const categories = store.categories || [];
+  const user = store.currentUser;
+  const isSupervisor = user.role === 'supervisor';
+
+  const activeCategory = window.ActiveProductCategory || 'all';
+  const filteredProducts = activeCategory === 'all' 
+    ? products 
+    : products.filter(p => p.category === activeCategory);
 
   return `
     <div class="product-module">
-      <!-- Search & Filters -->
-      <div class="card mb-4" style="margin-bottom: 20px;">
-        <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
-          <div style="display: flex; gap: 10px; flex: 1; min-width: 300px;">
-            <input type="text" id="product-search-input" class="form-control" placeholder="🔍 ค้นหาสินค้า SKU, ชื่อสินค้า, ยี่ห้อ..." oninput="Modules.product_filter()">
-            <select id="product-category-select" class="form-select" style="max-width: 220px;" onchange="Modules.product_filter()">
-              <option value="ALL">หมวดหมู่ทั้งหมด</option>
-              ${categories.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('')}
-            </select>
+      <!-- Top Action Bar -->
+      <div class="card mb-4">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+          <div>
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--accent-cyan-light);">📦 คลังข้อมูลสินค้า SKU Master (สินค้าทั้งหมด ${products.length} รายการ)</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">จัดการเพิ่ม SKU สินค้าใหม่ แก้ไขราคา และปรับเปลี่ยนพิกัดจัดเก็บในคลัง</p>
           </div>
-          
+
           <div style="display: flex; gap: 10px;">
-            <button class="btn btn-secondary" onclick="Modules.product_openComparisonModal()">📊 เปรียบเทียบสินค้า</button>
-            <button class="btn btn-primary" onclick="Modules.product_openUsageCalcModal()">🧮 เครื่องคำนวณการใช้งานต่อหน่วย</button>
+            ${isSupervisor ? `
+              <button class="btn btn-primary" onclick="Modules.product_openAddSkuModal()">+ เพิ่ม SKU สินค้าใหม่ (Add New SKU)</button>
+            ` : `
+              <span class="badge badge-warning" style="padding: 8px 12px;">🔒 สิทธิ์ Cashier ดูข้อมูล SKU ได้อย่างเดียว (Supervisor เท่านั้นที่เพิ่ม/แก้ไข SKU ได้)</span>
+            `}
           </div>
+        </div>
+
+        <!-- Category Pills Bar -->
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+          ${categories.map(c => `
+            <button class="btn btn-sm ${activeCategory === c.id ? 'btn-primary' : 'btn-secondary'}" onclick="Modules.product_filterCat('${c.id}')">
+              ${c.icon} ${c.name}
+            </button>
+          `).join('')}
         </div>
       </div>
 
-      <!-- Product List Grid -->
-      <div class="grid-3" id="product-cards-container" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-        ${products.map(p => `
-          <div class="card product-item-card" data-category="${p.category}" data-search="${p.name.toLowerCase()} ${p.sku.toLowerCase()} ${p.brand.toLowerCase()}">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-              <span style="font-size: 2.5rem;">${p.image}</span>
-              <span class="badge badge-info">${p.brand}</span>
-            </div>
-            
-            <div style="font-size: 0.75rem; color: var(--text-dim); font-weight: 600;">SKU: ${p.sku} | Location: ${p.binLocation}</div>
-            <h3 style="font-size: 1rem; font-weight: 600; margin: 6px 0; height: 48px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
-              ${p.name}
-            </h3>
-            
-            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px; height: 36px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
-              ${p.description}
-            </p>
-
-            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 15px;">
-              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
-                <span style="color: var(--text-muted);">คงเหลือ Real-time:</span>
-                <span style="font-weight: 700; color: ${p.stock <= p.minStock ? 'var(--accent-rose)' : 'var(--accent-emerald)'};">
-                  ${AppEngine.formatNumber(p.stock)} ${p.unit}
-                </span>
-              </div>
-              <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
-                <span style="color: var(--text-muted);">น้ำหนักต่อหน่วย:</span>
-                <span>${p.weightKg} กิโลกรัม</span>
-              </div>
-            </div>
-
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <div>
-                <span style="font-size: 0.75rem; color: var(--text-muted);">ราคาขาย</span>
-                <div style="font-size: 1.25rem; font-weight: 700; color: var(--accent-cyan-light);">฿${AppEngine.formatCurrency(p.price)} / ${p.unit}</div>
-              </div>
-              
-              <button class="btn btn-sm btn-primary" onclick="Modules.product_addToCart('${p.sku}')">+ เพิ่มใส่ POS / ใบเสนอราคา</button>
-            </div>
-          </div>
-        `).join('')}
+      <!-- SKU Master Table Grid -->
+      <div class="card">
+        <div class="table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>รหัส SKU</th>
+                <th>รูป / ไอคอน</th>
+                <th>รายการสินค้า (Product Description)</th>
+                <th>หมวดหมู่</th>
+                <th>ยี่ห้อ</th>
+                <th>ราคาขายหน้าร้าน</th>
+                <th>สต๊อกคงเหลือ</th>
+                <th>น้ำหนัก/หน่วย</th>
+                <th>พิกัด Bin</th>
+                <th>การจัดการ</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredProducts.length === 0 ? '<tr><td colspan="10" style="text-align: center; color: var(--text-dim); padding: 30px;">ไม่พบรายการสินค้าในหมวดนี้</td></tr>' : ''}
+              ${filteredProducts.map(p => `
+                <tr>
+                  <td style="font-weight: 700; color: var(--accent-cyan-light);">${p.sku}</td>
+                  <td style="font-size: 1.8rem; text-align: center;">${p.image || '📦'}</td>
+                  <td>
+                    <div style="font-weight: 700; font-size: 0.9rem;">${p.name}</div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted);">${p.description || '-'}</div>
+                  </td>
+                  <td><span class="badge badge-info">${p.category}</span></td>
+                  <td><strong style="color: var(--accent-amber);">${p.brand}</strong></td>
+                  <td style="font-weight: 700; font-size: 1rem; color: #10b981;">฿${AppEngine.formatCurrency(p.price)}</td>
+                  <td>
+                    <span style="font-weight: 700; color: ${p.stock <= p.minStock ? 'var(--accent-rose)' : '#fff'};">
+                      ${AppEngine.formatNumber(p.stock)} ${p.unit}
+                    </span>
+                    ${p.stock <= p.minStock ? '<br><span class="badge badge-danger">เตือนสต๊อกต่ำ</span>' : ''}
+                  </td>
+                  <td>${p.weightKg} กก.</td>
+                  <td><strong style="color: #67e8f9;">📍 ${p.binLocation || '-'}</strong></td>
+                  <td>
+                    ${isSupervisor ? `
+                      <div style="display: flex; gap: 5px;">
+                        <button class="btn btn-sm btn-secondary" onclick="Modules.product_openEditSkuModal('${p.sku}')">✏️ แก้ไข</button>
+                        <button class="btn btn-sm btn-danger" onclick="Modules.product_deleteSku('${p.sku}')">🗑️</button>
+                      </div>
+                    ` : `
+                      <span style="font-size: 0.75rem; color: var(--text-dim);">🔒 อ่านอย่างเดียว</span>
+                    `}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   `;
 };
 
-// Filter Products
-window.Modules.product_filter = function() {
-  const query = (document.getElementById('product-search-input')?.value || '').toLowerCase();
-  const cat = document.getElementById('product-category-select')?.value || 'ALL';
-
-  document.querySelectorAll('.product-item-card').forEach(card => {
-    const cardCat = card.dataset.category;
-    const cardSearch = card.dataset.search;
-
-    const matchesCat = (cat === 'ALL' || cardCat === cat);
-    const matchesSearch = cardSearch.includes(query);
-
-    card.style.display = (matchesCat && matchesSearch) ? 'block' : 'none';
-  });
+window.Modules.product_filterCat = function(catId) {
+  window.ActiveProductCategory = catId;
+  AppEngine.loadModule('product');
 };
 
-// Open Product Comparison Modal
-window.Modules.product_openComparisonModal = function() {
-  const products = window.AppStore.data.products;
-  const p1 = products[0];
-  const p2 = products[1];
-
-  const html = `
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-      <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
-        <div style="font-size: 2rem;">${p1.image}</div>
-        <h4 style="font-size: 1rem; font-weight: 700;">${p1.name}</h4>
-        <p style="color: var(--accent-cyan-light); font-weight: 700; font-size: 1.2rem;">฿${AppEngine.formatCurrency(p1.price)} / ${p1.unit}</p>
-        <ul style="font-size: 0.85rem; color: var(--text-muted); margin-top: 10px; list-style: none;">
-          <li>• แบรนด์: ${p1.brand}</li>
-          <li>• น้ำหนัก: ${p1.weightKg} กก.</li>
-          <li>• ตำแหน่งคลัง: ${p1.binLocation}</li>
-          <li>• สต๊อกคงเหลือ: ${p1.stock} ${p1.unit}</li>
-        </ul>
-      </div>
-
-      <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
-        <div style="font-size: 2rem;">${p2.image}</div>
-        <h4 style="font-size: 1rem; font-weight: 700;">${p2.name}</h4>
-        <p style="color: var(--accent-cyan-light); font-weight: 700; font-size: 1.2rem;">฿${AppEngine.formatCurrency(p2.price)} / ${p2.unit}</p>
-        <ul style="font-size: 0.85rem; color: var(--text-muted); margin-top: 10px; list-style: none;">
-          <li>• แบรนด์: ${p2.brand}</li>
-          <li>• น้ำหนัก: ${p2.weightKg} กก.</li>
-          <li>• ตำแหน่งคลัง: ${p2.binLocation}</li>
-          <li>• สต๊อกคงเหลือ: ${p2.stock} ${p2.unit}</li>
-        </ul>
-      </div>
-    </div>
-  `;
-
-  AppEngine.openModal('📊 เปรียบเทียบคุณสมบัติสินค้า (Product Comparison)', html, '<button class="btn btn-secondary" onclick="AppEngine.closeModal()">ปิดหน้าต่าง</button>');
-};
-
-// Open Unit Usage Estimator Modal
-window.Modules.product_openUsageCalcModal = function() {
+// ADD NEW SKU MODAL
+window.Modules.product_openAddSkuModal = function() {
+  const categories = window.AppStore.data.categories || [];
   const html = `
     <div>
-      <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 15px;">
-        เครื่องมือคำนวณประมาณการใช้งานวัสดุเบื้องต้นสำหรับช่างและเจ้าของบ้าน
-      </p>
-      
-      <div class="form-group">
-        <label class="form-label">เลือกประเภทงานที่ต้องการคำนวณ:</label>
-        <select id="usage-type" class="form-select" onchange="Modules.product_calcUsage()">
-          <option value="WALL_BRICK">งานก่อผนังอิฐมอญ / อิฐมวลเบา (ตร.ม.)</option>
-          <option value="CONCRETE_POUR">งานเทพื้นคอนกรีตหนา 10 ซม. (ตร.ม.)</option>
-          <option value="ROOF_COVER">งานมุงหลังคาบ้าน (ตร.ม.)</option>
-        </select>
+      <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+        <div class="form-group">
+          <label class="form-label">รหัส SKU สินค้า: <span style="color: red;">*</span></label>
+          <input type="text" id="add-sku" class="form-control" placeholder="เช่น IRN-001, PIP-001, CEM-003">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ชื่อรายการสินค้า: <span style="color: red;">*</span></label>
+          <input type="text" id="add-name" class="form-control" placeholder="เช่น เหล็กเส้นข้ออ้อย SD40 12 มม. ยาว 10 ม.">
+        </div>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">ระบุพื้นที่ทั้งหมด (ตารางเมตร):</label>
-        <input type="number" id="usage-sqm" class="form-control" value="50" oninput="Modules.product_calcUsage()">
+      <div class="grid-3" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+        <div class="form-group">
+          <label class="form-label">หมวดหมู่สินค้า:</label>
+          <select id="add-category" class="form-select">
+            ${categories.filter(c => c.id !== 'all').map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ยี่ห้อ / แบรนด์:</label>
+          <input type="text" id="add-brand" class="form-control" value="น้ำเพชร">
+        </div>
+        <div class="form-group">
+          <label class="form-label">หน่วยนับ:</label>
+          <input type="text" id="add-unit" class="form-control" value="เส้น" placeholder="ถุง, เส้น, แผ่น, กล่อง, ม้วน">
+        </div>
       </div>
 
-      <div id="calc-result-box" style="background: rgba(6, 182, 212, 0.1); border: 1px solid #06b6d4; padding: 15px; border-radius: 8px; margin-top: 15px;">
-        <!-- Computed results -->
+      <div class="grid-3" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+        <div class="form-group">
+          <label class="form-label">ราคาขายหน้าร้าน (บาท): <span style="color: red;">*</span></label>
+          <input type="number" id="add-price" class="form-control" value="280">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ราคาต้นทุนตั้งต้น (บาท):</label>
+          <input type="number" id="add-cost" class="form-control" value="210">
+        </div>
+        <div class="form-group">
+          <label class="form-label">จำนวนสต๊อกตั้งต้น:</label>
+          <input type="number" id="add-stock" class="form-control" value="500">
+        </div>
+      </div>
+
+      <div class="grid-3" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+        <div class="form-group">
+          <label class="form-label">เตือนสต๊อกต่ำ (Min Stock):</label>
+          <input type="number" id="add-minstock" class="form-control" value="50">
+        </div>
+        <div class="form-group">
+          <label class="form-label">น้ำหนักต่อหน่วย (กก.):</label>
+          <input type="number" id="add-weight" class="form-control" value="8.88" step="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">พิกัดจัดเก็บ (Bin Location):</label>
+          <input type="text" id="add-bin" class="form-control" value="S-01-01">
+        </div>
+      </div>
+
+      <div class="form-group mb-0">
+        <label class="form-label">คำอธิบายคุณสมบัติสินค้า:</label>
+        <textarea id="add-desc" class="form-control" rows="2">เหล็กเส้นข้ออ้อย มาตรฐาน มอก. สำหรับงานโครงสร้างเสา-คานอาคารแข็งแรงทนทาน</textarea>
       </div>
     </div>
   `;
 
-  AppEngine.openModal('🧮 เครื่องคำนวณปริมาณการใช้งานต่อหน่วย', html, '<button class="btn btn-secondary" onclick="AppEngine.closeModal()">ปิด</button>');
-  setTimeout(() => window.Modules.product_calcUsage(), 100);
+  AppEngine.openModal('📦 เพิ่ม SKU สินค้าใหม่เข้าคลังร้าน', html, `
+    <button class="btn btn-secondary" onclick="AppEngine.closeModal()">ยกเลิก</button>
+    <button class="btn btn-primary" onclick="Modules.product_saveNewSku()">+ บันทึกเพิ่ม SKU สินค้าใหม่</button>
+  `);
 };
 
-window.Modules.product_calcUsage = function() {
-  const type = document.getElementById('usage-type')?.value;
-  const sqm = parseFloat(document.getElementById('usage-sqm')?.value || 0);
-  const resultBox = document.getElementById('calc-result-box');
-  if (!resultBox) return;
+window.Modules.product_saveNewSku = function() {
+  const store = window.AppStore.data;
+  const sku = document.getElementById('add-sku')?.value?.trim();
+  const name = document.getElementById('add-name')?.value?.trim();
+  const category = document.getElementById('add-category')?.value;
+  const brand = document.getElementById('add-brand')?.value || 'น้ำเพชร';
+  const unit = document.getElementById('add-unit')?.value || 'ชิ้น';
+  const price = parseFloat(document.getElementById('add-price')?.value || 0);
+  const cost = parseFloat(document.getElementById('add-cost')?.value || 0);
+  const stock = parseInt(document.getElementById('add-stock')?.value || 0);
+  const minStock = parseInt(document.getElementById('add-minstock')?.value || 20);
+  const weight = parseFloat(document.getElementById('add-weight')?.value || 1.0);
+  const bin = document.getElementById('add-bin')?.value || 'A-01';
+  const desc = document.getElementById('add-desc')?.value || '';
 
-  if (type === 'WALL_BRICK') {
-    const brickRed = Math.ceil(sqm * 120);
-    const brickQcon = Math.ceil(sqm * 8.33);
-    const cementBag = (sqm * 0.35).toFixed(1);
-    resultBox.innerHTML = `
-      <h5 style="font-size: 0.95rem; font-weight: 700; color: #67e8f9; margin-bottom: 8px;">ผลการคำนวณสำหรับพื้นที่ก่อผนัง ${sqm} ตร.ม.:</h5>
-      <ul style="font-size: 0.88rem; color: #fff; line-height: 1.6;">
-        <li>• หากใช้อิฐมอญแดง: <strong>${AppEngine.formatNumber(brickRed)} ก้อน</strong> + ปูนก่อ <strong>${cementBag} ถุง</strong></li>
-        <li>• หากใช้อิฐมวลเบา Q-CON: <strong>${AppEngine.formatNumber(brickQcon)} ก้อน</strong> + ปูนก่อ <strong>${(sqm*0.15).toFixed(1)} ถุง</strong></li>
-      </ul>
-    `;
-  } else if (type === 'CONCRETE_POUR') {
-    const cuM = (sqm * 0.10).toFixed(2); // 10 cm thickness
-    const cementBags = Math.ceil(cuM * 7); // ~7 bags per cu.m
-    resultBox.innerHTML = `
-      <h5 style="font-size: 0.95rem; font-weight: 700; color: #67e8f9; margin-bottom: 8px;">ผลการคำนวณงานเทพื้นหนา 10 ซม. พื้นที่ ${sqm} ตร.ม.:</h5>
-      <ul style="font-size: 0.88rem; color: #fff; line-height: 1.6;">
-        <li>• ปริมาตรคอนกรีตที่ต้องใช้: <strong>${cuM} คิว (คิวบิกเมตร)</strong></li>
-        <li>• หรือใช้ปูนโครงสร้างผสมเอง: <strong>${cementBags} ถุง</strong> (ทราย 0.5 คิว, หิน 0.9 คิว)</li>
-      </ul>
-    `;
-  } else {
-    const doubleTile = Math.ceil(sqm * 2.2);
-    const concreteTile = Math.ceil(sqm * 11);
-    resultBox.innerHTML = `
-      <h5 style="font-size: 0.95rem; font-weight: 700; color: #67e8f9; margin-bottom: 8px;">ผลการคำนวณกระเบื้องหลังคา พื้นที่ ${sqm} ตร.ม.:</h5>
-      <ul style="font-size: 0.88rem; color: #fff; line-height: 1.6;">
-        <li>• กระเบื้องหลังคาลอนคู่ SCG: <strong>${AppEngine.formatNumber(doubleTile)} แผ่น</strong></li>
-        <li>• กระเบื้องคอนกรีต ซีแพค: <strong>${AppEngine.formatNumber(concreteTile)} แผ่น</strong></li>
-      </ul>
-    `;
+  if (!sku || !name || price <= 0) {
+    AppEngine.showToast('กรุณาระบุรหัส SKU, ชื่อสินค้า และราคาขายให้ถูกต้อง', 'danger');
+    return;
   }
+
+  if (store.products.find(x => x.sku === sku)) {
+    AppEngine.showToast(`รหัส SKU ${sku} มีอยู่ในระบบแล้ว! กรุณาใช้รหัสอื่น`, 'warning');
+    return;
+  }
+
+  const newProduct = {
+    sku: sku,
+    name: name,
+    category: category,
+    brand: brand,
+    price: price,
+    unit: unit,
+    stock: stock,
+    minStock: minStock,
+    weightKg: weight,
+    binLocation: bin,
+    image: '📦',
+    unitsSoldMonth: 0,
+    totalSalesMonth: 0,
+    marginPercent: cost > 0 ? ((price - cost) / price * 100) : 25.0,
+    description: desc,
+    lots: [
+      { lotNo: `LOT-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-01`, costPrice: cost, qty: stock, receiveDate: new Date().toISOString().slice(0,10) }
+    ]
+  };
+
+  store.products.unshift(newProduct);
+  window.AppStore.save();
+  AppEngine.closeModal();
+  AppEngine.showToast(`เพิ่ม SKU สินค้าใหม่ [${sku}] ${name} สำเร็จ!`, 'success');
+  AppEngine.loadModule('product');
 };
 
-window.Modules.product_addToCart = function(sku) {
-  const p = window.AppStore.data.products.find(x => x.sku === sku);
+// EDIT SKU MODAL
+window.Modules.product_openEditSkuModal = function(sku) {
+  const store = window.AppStore.data;
+  const p = store.products.find(x => x.sku === sku);
   if (!p) return;
-  AppEngine.showToast(`เพิ่ม ${p.name} เข้าสู่ตะกร้าสินค้าสำเร็จ!`, 'success');
+
+  const html = `
+    <div>
+      <div class="form-group">
+        <label class="form-label">รหัส SKU (แก้ไขไม่ได้):</label>
+        <input type="text" class="form-control" value="${p.sku}" disabled style="background: rgba(255,255,255,0.05);">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">ชื่อรายการสินค้า:</label>
+        <input type="text" id="edit-name" class="form-control" value="${p.name}">
+      </div>
+
+      <div class="grid-3" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+        <div class="form-group">
+          <label class="form-label">ราคาขาย (บาท):</label>
+          <input type="number" id="edit-price" class="form-control" value="${p.price}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">หน่วยนับ:</label>
+          <input type="text" id="edit-unit" class="form-control" value="${p.unit}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ยี่ห้อ:</label>
+          <input type="text" id="edit-brand" class="form-control" value="${p.brand}">
+        </div>
+      </div>
+
+      <div class="grid-3" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+        <div class="form-group">
+          <label class="form-label">จำนวนสต๊อกคงเหลือ:</label>
+          <input type="number" id="edit-stock" class="form-control" value="${p.stock}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">เตือนสต๊อกต่ำ:</label>
+          <input type="number" id="edit-minstock" class="form-control" value="${p.minStock}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">พิกัด Bin Location:</label>
+          <input type="text" id="edit-bin" class="form-control" value="${p.binLocation}">
+        </div>
+      </div>
+
+      <div class="form-group mb-0">
+        <label class="form-label">คำอธิบายเพิ่มเติม:</label>
+        <textarea id="edit-desc" class="form-control" rows="2">${p.description || ''}</textarea>
+      </div>
+    </div>
+  `;
+
+  AppEngine.openModal(`✏️ แก้ไขข้อมูล SKU - ${p.sku}`, html, `
+    <button class="btn btn-secondary" onclick="AppEngine.closeModal()">ยกเลิก</button>
+    <button class="btn btn-primary" onclick="Modules.product_saveEditSku('${p.sku}')">บันทึกการแก้ไข</button>
+  `);
+};
+
+window.Modules.product_saveEditSku = function(sku) {
+  const store = window.AppStore.data;
+  const p = store.products.find(x => x.sku === sku);
+  if (!p) return;
+
+  p.name = document.getElementById('edit-name')?.value || p.name;
+  p.price = parseFloat(document.getElementById('edit-price')?.value || p.price);
+  p.unit = document.getElementById('edit-unit')?.value || p.unit;
+  p.brand = document.getElementById('edit-brand')?.value || p.brand;
+  p.stock = parseInt(document.getElementById('edit-stock')?.value || p.stock);
+  p.minStock = parseInt(document.getElementById('edit-minstock')?.value || p.minStock);
+  p.binLocation = document.getElementById('edit-bin')?.value || p.binLocation;
+  p.description = document.getElementById('edit-desc')?.value || p.description;
+
+  window.AppStore.save();
+  AppEngine.closeModal();
+  AppEngine.showToast(`แก้ไขข้อมูล SKU [${sku}] สำเร็จ!`, 'success');
+  AppEngine.loadModule('product');
+};
+
+// DELETE SKU
+window.Modules.product_deleteSku = function(sku) {
+  const store = window.AppStore.data;
+  const idx = store.products.findIndex(x => x.sku === sku);
+  if (idx === -1) return;
+
+  if (confirm(`คุณต้องการลบ SKU [${sku}] ออกจากระบบคลังสินค้าใช่หรือไม่?`)) {
+    store.products.splice(idx, 1);
+    window.AppStore.save();
+    AppEngine.showToast(`ลบ SKU [${sku}] เรียบร้อยแล้ว`, 'info');
+    AppEngine.loadModule('product');
+  }
 };
