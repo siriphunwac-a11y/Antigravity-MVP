@@ -14,11 +14,20 @@ window.InitialAppData = {
     branch: "สำนักงานใหญ่ (00000)"
   },
 
-  // 2. User Accounts System (ระบบบัญชีผู้ใช้งานส่วนบุคคล)
+  // 2. User Accounts System (ระบบบัญชีผู้ใช้งานส่วนบุคคลตามโครงสร้างร้าน)
   users: [
-    { username: 'admin', password: '123', name: 'นายสมศักดิ์ (หัวหน้างาน / ผู้จัดการ)', role: 'supervisor', avatar: '👨‍💼' },
-    { username: 'cashier1', password: '123', name: 'นายสมชาย (พนักงานขาย / POS 1)', role: 'cashier', avatar: '🧑‍💻' },
-    { username: 'cashier2', password: '123', name: 'นางสาววิภาดา (พนักงานขาย / POS 2)', role: 'cashier', avatar: '👩‍💻' }
+    // Supervisors (5 คน)
+    { username: 'SPV-1', password: '8750', name: 'นายสมศักดิ์ (หัวหน้างาน 1 / ผู้จัดการ)', role: 'supervisor', avatar: '👨‍💼' },
+    { username: 'SPV-2', password: '6117', name: 'หัวหน้างาน 2', role: 'supervisor', avatar: '👨‍💼' },
+    { username: 'SPV-3', password: '5688', name: 'หัวหน้างาน 3', role: 'supervisor', avatar: '👨‍💼' },
+    { username: 'SPV-4', password: '2975', name: 'หัวหน้างาน 4', role: 'supervisor', avatar: '👨‍💼' },
+    { username: 'SPV-5', password: '9597', name: 'หัวหน้างาน 5', role: 'supervisor', avatar: '👨‍💼' },
+
+    // Cashiers (4 คน)
+    { username: 'CSR-1', password: '7857', name: 'นายสมชาย (พนักงานขาย 1 / POS 1)', role: 'cashier', avatar: '🧑‍💻' },
+    { username: 'CSR-2', password: '4935', name: 'พนักงานขาย 2 (POS 2)', role: 'cashier', avatar: '🧑‍💻' },
+    { username: 'CSR-3', password: '1639', name: 'พนักงานขาย 3 (POS 3)', role: 'cashier', avatar: '👩‍💻' },
+    { username: 'CSR-4', password: '8263', name: 'พนักงานขาย 4 (POS 4)', role: 'cashier', avatar: '👩‍💻' }
   ],
   currentUser: null,
 

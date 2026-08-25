@@ -1,6 +1,6 @@
 // ==========================================
 // Main Application Engine & Auth Manager
-// (บริษัท น้ำเพชรค้าไม้ จำกัด - Strict Auth & Staff User Management)
+// (บริษัท น้ำเพชรค้าไม้ จำกัด - Production Accounts & Security)
 // ==========================================
 
 window.AppStore = {
@@ -20,13 +20,32 @@ window.AppStore = {
       this.data = window.InitialAppData;
     }
 
-    // Ensure default users list exists
+    // Always ensure requested default Supervisor & Cashier accounts exist
+    const defaultUsers = [
+      { username: 'SPV-1', password: '8750', name: 'นายสมศักดิ์ (หัวหน้างาน 1 / ผู้จัดการ)', role: 'supervisor', avatar: '👨‍💼' },
+      { username: 'SPV-2', password: '6117', name: 'หัวหน้างาน 2', role: 'supervisor', avatar: '👨‍💼' },
+      { username: 'SPV-3', password: '5688', name: 'หัวหน้างาน 3', role: 'supervisor', avatar: '👨‍💼' },
+      { username: 'SPV-4', password: '2975', name: 'หัวหน้างาน 4', role: 'supervisor', avatar: '👨‍💼' },
+      { username: 'SPV-5', password: '9597', name: 'หัวหน้างาน 5', role: 'supervisor', avatar: '👨‍💼' },
+      { username: 'CSR-1', password: '7857', name: 'นายสมชาย (พนักงานขาย 1 / POS 1)', role: 'cashier', avatar: '🧑‍💻' },
+      { username: 'CSR-2', password: '4935', name: 'พนักงานขาย 2 (POS 2)', role: 'cashier', avatar: '🧑‍💻' },
+      { username: 'CSR-3', password: '1639', name: 'พนักงานขาย 3 (POS 3)', role: 'cashier', avatar: '👩‍💻' },
+      { username: 'CSR-4', password: '8263', name: 'พนักงานขาย 4 (POS 4)', role: 'cashier', avatar: '👩‍💻' }
+    ];
+
     if (!this.data.users || this.data.users.length === 0) {
-      this.data.users = [
-        { username: 'admin', password: '123', name: 'นายสมศักดิ์ (หัวหน้างาน / ผู้จัดการ)', role: 'supervisor', avatar: '👨‍💼' },
-        { username: 'cashier1', password: '123', name: 'นายสมชาย (พนักงานขาย / POS 1)', role: 'cashier', avatar: '🧑‍💻' },
-        { username: 'cashier2', password: '123', name: 'นางสาววิภาดา (พนักงานขาย / POS 2)', role: 'cashier', avatar: '👩‍💻' }
-      ];
+      this.data.users = defaultUsers;
+    } else {
+      // Merge missing default accounts if any
+      defaultUsers.forEach(du => {
+        const exists = this.data.users.find(u => u.username.toLowerCase() === du.username.toLowerCase());
+        if (!exists) {
+          this.data.users.push(du);
+        } else {
+          // Update password to match user specification
+          exists.password = du.password;
+        }
+      });
     }
 
     this.save();
@@ -73,7 +92,7 @@ window.AppEngine = {
     this.loadModule(this.currentModule);
   },
 
-  // Strict Login Modal (No Quick Select, Only Username & Password)
+  // Strict Login Modal (No password hints in footer)
   showLoginModal() {
     const html = `
       <div style="text-align: center; padding: 15px;">
@@ -87,7 +106,7 @@ window.AppEngine = {
         <div style="text-align: left; background: rgba(0,0,0,0.25); padding: 22px; border-radius: 12px; border: 1px solid var(--border-color); max-width: 440px; margin: 0 auto;">
           <div class="form-group mb-3">
             <label class="form-label" style="font-weight: 600;">ชื่อผู้ใช้ (Username): <span style="color: red;">*</span></label>
-            <input type="text" id="login-username-input" class="form-control" placeholder="ระบุ username (เช่น admin หรือ cashier1)" onkeyup="if(event.key==='Enter') AppEngine.submitLogin()">
+            <input type="text" id="login-username-input" class="form-control" placeholder="ระบุ username (เช่น SPV-1 หรือ CSR-1)" onkeyup="if(event.key==='Enter') AppEngine.submitLogin()">
           </div>
 
           <div class="form-group mb-4">
@@ -97,10 +116,9 @@ window.AppEngine = {
 
           <button class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 1rem;" onclick="AppEngine.submitLogin()">🔑 ล็อกอินเข้าสู่ระบบ (Sign In)</button>
 
-          <div style="margin-top: 15px; background: rgba(6, 182, 212, 0.1); border: 1px dashed rgba(6, 182, 212, 0.3); padding: 10px; border-radius: 8px; font-size: 0.78rem; color: var(--text-muted);">
-            💡 <strong>สำหรับพนักงาน:</strong> หากยังไม่มีชื่อผู้ใช้และรหัสผ่าน กรุณาแจ้งหัวหน้างาน (Admin) เพื่อทำการสร้างบัญชีให้ท่าน<br>
-            👨‍💼 <em>หัวหน้างาน (Admin):</em> admin / 123<br>
-            🧑‍💻 <em>พนักงานขาย (Cashier):</em> cashier1 / 123
+          <!-- CLEAN FOOTER NOTE WITHOUT PASSWORD HINTS -->
+          <div style="margin-top: 15px; background: rgba(6, 182, 212, 0.1); border: 1px dashed rgba(6, 182, 212, 0.3); padding: 12px; border-radius: 8px; font-size: 0.82rem; color: var(--text-muted);">
+            💡 <strong>สำหรับพนักงาน:</strong> หากยังไม่มีชื่อผู้ใช้และรหัสผ่าน กรุณาแจ้งหัวหน้างาน (Admin) เพื่อทำการสร้างบัญชีให้ท่าน
           </div>
         </div>
       </div>
@@ -201,7 +219,7 @@ window.AppEngine = {
                   <td>
                     <div style="display: flex; gap: 5px;">
                       <button class="btn btn-sm btn-secondary" onclick="AppEngine.openEditStaffPasswordModal('${u.username}')">✏️ แก้รหัส</button>
-                      ${u.username !== 'admin' ? `
+                      ${u.username !== 'SPV-1' ? `
                         <button class="btn btn-sm btn-danger" onclick="AppEngine.deleteStaffUser('${u.username}')">🗑️</button>
                       ` : '<span style="font-size: 0.72rem; color: var(--text-dim);">หลัก</span>'}
                     </div>
@@ -229,17 +247,17 @@ window.AppEngine = {
 
         <div class="form-group mb-3">
           <label class="form-label">ชื่อผู้ใช้ (Username สำหรับใช้ล็อกอิน): <span style="color: red;">*</span></label>
-          <input type="text" id="signup-username" class="form-control" placeholder="เช่น cashier3, sale_somchai (ภาษาอังกฤษ อักษรตัวเล็ก)">
+          <input type="text" id="signup-username" class="form-control" placeholder="เช่น SPV-6 หรือ CSR-5">
         </div>
 
         <div class="form-group mb-3">
           <label class="form-label">รหัสผ่าน (Password): <span style="color: red;">*</span></label>
-          <input type="password" id="signup-password" class="form-control" placeholder="กำหนดรหัสผ่าน (เช่น 123456)">
+          <input type="password" id="signup-password" class="form-control" placeholder="กำหนดรหัสผ่าน">
         </div>
 
         <div class="form-group mb-3">
           <label class="form-label">ชื่อ-นามสกุล พนักงาน: <span style="color: red;">*</span></label>
-          <input type="text" id="signup-name" class="form-control" placeholder="เช่น นายสมชาย สายเปย์ (พนักงานขาย POS 3)">
+          <input type="text" id="signup-name" class="form-control" placeholder="เช่น นายสมชาย สายเปย์ (พนักงานขาย POS 5)">
         </div>
 
         <div class="form-group mb-3">
