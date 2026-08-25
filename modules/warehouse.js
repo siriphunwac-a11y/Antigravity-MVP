@@ -37,8 +37,11 @@ window.Modules.warehouse = function() {
 
       <!-- Warehouse SKU Inventory Table -->
       <div class="card mb-4">
-        <div class="card-header">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
           <div class="card-title">🏭 คลังสินค้าคงเหลือ & ข้อมูล Lot ต้นทุน (Lot & Cost Control)</div>
+          ${isSupervisor ? `
+            <button class="btn btn-sm btn-primary" onclick="Modules.product_openAddSkuModal()">+ เพิ่ม SKU สินค้าใหม่</button>
+          ` : ''}
         </div>
 
         <div class="table-responsive">
@@ -55,6 +58,16 @@ window.Modules.warehouse = function() {
               </tr>
             </thead>
             <tbody>
+              ${products.length === 0 ? `
+                <tr>
+                  <td colspan="7" style="text-align: center; color: var(--text-dim); padding: 40px;">
+                    <div style="font-size: 2rem; margin-bottom: 10px;">📦</div>
+                    <div style="font-size: 1.1rem; font-weight: 700; color: #67e8f9;">ระบบคลังสินค้ายังว่างเปล่า (ไม่มี SKU สินค้า)</div>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 5px; margin-bottom: 15px;">คลิกปุ่มด้านล่างเพื่อเริ่มลงรายการ SKU สินค้าแรกของร้าน</p>
+                    <button class="btn btn-primary" onclick="Modules.product_openAddSkuModal()">+ เพิ่ม SKU สินค้าใหม่แรกเข้าคลัง</button>
+                  </td>
+                </tr>
+              ` : ''}
               ${products.map(p => {
                 const isLow = p.stock <= p.minStock;
                 return `
@@ -64,7 +77,7 @@ window.Modules.warehouse = function() {
                       <div style="font-size: 0.88rem;">${p.name}</div>
                     </td>
                     <td><span class="badge badge-info">${p.brand}</span></td>
-                    <td><strong style="color: var(--accent-amber);">${p.binLocation}</strong></td>
+                    <td><strong style="color: var(--accent-amber);">${p.binLocation || '-'}</strong></td>
                     <td style="font-weight: 700; font-size: 1.1rem; color: ${isLow ? 'var(--accent-rose)' : '#fff'};">
                       ${AppEngine.formatNumber(p.stock)} ${p.unit}
                     </td>
@@ -116,6 +129,7 @@ window.Modules.warehouse = function() {
               </tr>
             </thead>
             <tbody>
+              ${logs.length === 0 ? '<tr><td colspan="7" style="text-align: center; color: var(--text-dim); padding: 25px;">ยังไม่มีประวัติการเคลื่อนไหวสต๊อก</td></tr>' : ''}
               ${logs.map(log => `
                 <tr>
                   <td style="color: var(--text-dim);">${log.timestamp}</td>
@@ -144,38 +158,55 @@ window.Modules.warehouse = function() {
 // Stock Replenishment & Return Modal for Cashier & Supervisor
 window.Modules.warehouse_openStockInModal = function(mode) {
   const store = window.AppStore.data;
-  const products = store.products;
+  const products = store.products || [];
+
+  if (products.length === 0) {
+    AppEngine.openModal('⚠️ ระบบยังไม่มี SKU สินค้า', `
+      <div style="text-align: center; padding: 20px;">
+        <div style="font-size: 2.5rem; margin-bottom: 10px;">📦</div>
+        <h4 style="color: #67e8f9;">ระบบคลังสินค้ายังว่างเปล่า</h4>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">
+          กรุณาเพิ่ม SKU สินค้าใหม่ของร้านก่อนทำรายการคีย์รับเข้าสต๊อก
+        </p>
+        <button class="btn btn-primary" onclick="AppEngine.closeModal(); Modules.product_openAddSkuModal();">
+          + เพิ่ม SKU สินค้าใหม่เข้าคลัง
+        </button>
+      </div>
+    `, '');
+    return;
+  }
 
   const html = `
     <div>
       <div style="background: rgba(6, 182, 212, 0.1); border: 1px solid #06b6d4; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem;">
         ${mode === 'RETURN' 
           ? '↩️ <strong>โหมดคีย์รับคืนสินค้าเข้าสต๊อก:</strong> กรุณาระบุหมายเหตุและสาเหตุการคืน' 
-          : '➕ <strong>โหมดคีย์รับเข้าสินค้า:</strong> สแกน Barcode หรือคีย์รหัส SKU ด้วยมือ'}
+          : '➕ <strong>โหมดคีย์รับเข้าสินค้า:</strong> เลือกรหัส SKU สินค้า และระบุจำนวน/ราคาต้นทุนจริง'}
       </div>
 
       <div class="form-group">
-        <label class="form-label">สแกน Barcode หรือเลือกสินค้า (SKU):</label>
-        <select class="form-select" id="stockin-sku-select">
+        <label class="form-label">เลือกรหัสสินค้า (SKU): <span style="color: red;">*</span></label>
+        <select class="form-select" id="stockin-sku-select" onchange="Modules.warehouse_onSkuSelectChange(this.value)">
+          <option value="">-- กรุณาเลือกรหัส SKU สินค้า --</option>
           ${products.map(p => `<option value="${p.sku}">[${p.sku}] ${p.name} (คงเหลือ: ${p.stock} ${p.unit})</option>`).join('')}
         </select>
       </div>
 
       <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
         <div class="form-group">
-          <label class="form-label">จำนวนที่ ${mode === 'RETURN' ? 'รับคืน' : 'รับเข้า'}:</label>
-          <input type="number" id="stockin-qty" class="form-control" value="10">
+          <label class="form-label">จำนวนที่ ${mode === 'RETURN' ? 'รับคืน' : 'รับเข้า'}: <span style="color: red;">*</span></label>
+          <input type="number" id="stockin-qty" class="form-control" placeholder="กรอกจำนวน (เช่น 50)">
         </div>
 
         <div class="form-group">
-          <label class="form-label">ราคาต้นทุนต่อหน่วย Lot นี้ (บาท):</label>
-          <input type="number" id="stockin-cost" class="form-control" value="68">
+          <label class="form-label">ราคาต้นทุนต่อหน่วย Lot นี้ (บาท): <span style="color: red;">*</span></label>
+          <input type="number" id="stockin-cost" class="form-control" placeholder="กรอกราคาต้นทุนต่อหน่วย">
         </div>
       </div>
 
-      <div class="form-group">
+      <div class="form-group mb-0">
         <label class="form-label">หมายเหตุ / เหตุผลการ${mode === 'RETURN' ? 'รับคืน' : 'คีย์รับเข้า'}: <span style="color: red;">*</span></label>
-        <input type="text" id="stockin-note" class="form-control" value="${mode === 'RETURN' ? 'ลูกค้าซื้อผิดขนาด สภาพสินค้าใหม่ 100%' : 'คีย์รับเข้าสินค้าโดย Cashier หน้าร้าน'}">
+        <input type="text" id="stockin-note" class="form-control" placeholder="${mode === 'RETURN' ? 'เช่น ลูกค้าซื้อเกิน ขอคืนสินค้าสภาพใหม่ 100%' : 'เช่น รับเข้าสินค้าจากการจัดซื้อ PO ล่าสุด'}">
       </div>
     </div>
   `;
@@ -186,12 +217,31 @@ window.Modules.warehouse_openStockInModal = function(mode) {
   `);
 };
 
+window.Modules.warehouse_onSkuSelectChange = function(sku) {
+  const p = window.AppStore.data.products.find(x => x.sku === sku);
+  if (!p) return;
+  const costInput = document.getElementById('stockin-cost');
+  if (costInput && p.lots && p.lots.length > 0) {
+    costInput.value = p.lots[p.lots.length - 1].costPrice || '';
+  }
+};
+
 window.Modules.warehouse_submitStockIn = function(mode) {
   const store = window.AppStore.data;
   const sku = document.getElementById('stockin-sku-select')?.value;
   const qty = parseInt(document.getElementById('stockin-qty')?.value || 0);
   const cost = parseFloat(document.getElementById('stockin-cost')?.value || 0);
   const note = document.getElementById('stockin-note')?.value || '';
+
+  if (!sku) {
+    AppEngine.showToast('กรุณาเลือกรายการสินค้า SKU', 'danger');
+    return;
+  }
+
+  if (qty <= 0) {
+    AppEngine.showToast('กรุณาระบุจำนวนที่รับเข้าให้ถูกต้อง (ต้องมากกว่า 0)', 'danger');
+    return;
+  }
 
   if (!note.trim()) {
     AppEngine.showToast('กรุณาระบุหมายเหตุการรับคืน/คีย์รับเข้า', 'danger');
@@ -219,7 +269,7 @@ window.Modules.warehouse_submitStockIn = function(mode) {
     type: mode === 'RETURN' ? 'IN_RETURN' : 'IN_MANUAL',
     qty: +qty,
     balanceAfter: p.stock,
-    actor: `${store.currentUser.id} (${store.currentUser.name})`,
+    actor: `${store.currentUser.username} (${store.currentUser.name})`,
     note: note
   };
   store.stockLogs.unshift(newLog);

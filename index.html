@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>บริษัท น้ำเพชรค้าไม้ จำกัด - ระบบวัสดุก่อสร้าง One Stop Service</title>
   <meta name="description" content="บริษัท น้ำเพชรค้าไม้ จำกัด (8 หมู่ที่ 1 ต.หนองปรง อ.เขาย้อย จ.เพชรบุรี 76140 | 080-995-7811, 086-339-1833, 081-526-2975) ระบบจัดการวัสดุก่อสร้าง ไม้ฝา ไม้พื้น ยิปซั่ม สมาร์ทบอร์ด เสารั้ว ลวดหนาม คลังสินค้า POS ขนส่ง">
-  <link rel="stylesheet" href="styles.css?v=20260825_2">
+  <link rel="stylesheet" href="styles.css?v=20260825_3">
 </head>
 <body>
   <div class="app-container">
@@ -90,7 +90,8 @@
           </div>
 
           <button class="btn btn-primary btn-sm" onclick="AppEngine.showLoginModal()">🔑 สลับบัญชีผู้ใช้</button>
-          <button class="btn btn-secondary btn-sm" onclick="AppStore.reset()">🔄 Reset Data</button>
+          <button class="btn btn-danger btn-sm" onclick="AppStore.clearBlankStore()" title="ล้างระบบเป็นว่างเปล่าเพื่อตั้งต้นคีย์ข้อมูลจริงของร้าน">🧹 ล้างระบบเป็น 0 (เริ่มคีย์ของจริง)</button>
+          <button class="btn btn-secondary btn-sm" onclick="AppStore.reset()" title="โหลดข้อมูลตัวอย่างสำหรับทดลอง">🔄 ดึงข้อมูลตัวอย่าง Demo</button>
         </div>
       </header>
 
@@ -117,18 +118,18 @@
     </div>
   </div>
 
-  <script src="data.js?v=20260825_2"></script>
-  <script src="app.js?v=20260825_2"></script>
-  <script src="modules/dashboard.js?v=20260825_2"></script>
-  <script src="modules/product.js?v=20260825_2"></script>
-  <script src="modules/procurement.js?v=20260825_2"></script>
-  <script src="modules/warehouse.js?v=20260825_2"></script>
-  <script src="modules/sales_pos.js?v=20260825_2"></script>
-  <script src="modules/ecommerce.js?v=20260825_2"></script>
-  <script src="modules/boq_calculator.js?v=20260825_2"></script>
-  <script src="modules/logistics.js?v=20260825_2"></script>
-  <script src="modules/crm.js?v=20260825_2"></script>
-  <script src="modules/accounting.js?v=20260825_2"></script>
-  <script src="modules/one_stop_scenario.js?v=20260825_2"></script>
+  <script src="data.js?v=20260825_3"></script>
+  <script src="app.js?v=20260825_3"></script>
+  <script src="modules/dashboard.js?v=20260825_3"></script>
+  <script src="modules/product.js?v=20260825_3"></script>
+  <script src="modules/procurement.js?v=20260825_3"></script>
+  <script src="modules/warehouse.js?v=20260825_3"></script>
+  <script src="modules/sales_pos.js?v=20260825_3"></script>
+  <script src="modules/ecommerce.js?v=20260825_3"></script>
+  <script src="modules/boq_calculator.js?v=20260825_3"></script>
+  <script src="modules/logistics.js?v=20260825_3"></script>
+  <script src="modules/crm.js?v=20260825_3"></script>
+  <script src="modules/accounting.js?v=20260825_3"></script>
+  <script src="modules/one_stop_scenario.js?v=20260825_3"></script>
 </body>
 </html>

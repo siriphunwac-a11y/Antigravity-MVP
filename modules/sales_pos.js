@@ -6,21 +6,17 @@
 window.Modules = window.Modules || {};
 
 window.PosCart = {
-  items: [
-    { sku: 'WOD-001', name: 'ไม้ฝาเฌอร่า/SCG 15x300 ซม.', price: 95, unit: 'แผ่น', qty: 50, weightKg: 4.5 },
-    { sku: 'BRD-001', name: 'แผ่นยิปซั่ม ตราช้าง 120x240 ซม. 9มม.', price: 165, unit: 'แผ่น', qty: 20, weightKg: 14.0 },
-    { sku: 'FNC-002', name: 'ลวดหนามชุบกัลวาไนซ์ 100m', price: 650, unit: 'ม้วน', qty: 4, weightKg: 10.0 }
-  ],
+  items: [],
   vatType: 'INCLUDE_VAT',
   deliveryMode: 'DELIVERY',
-  distanceKm: 12,
-  depositAmount: 2000,
+  distanceKm: 5,
+  depositAmount: 0,
   selectedCashierId: 'CS-001',
   paymentMethod: 'CASH',
   selectedBankId: 'KBANK',
-  customerName: 'คุณอนันต์ (โครงการบ้านสวนเพชรบุรี)',
-  customerAddress: '88 หมู่ 3 ต.หนองปรง อ.เขาย้อย จ.เพชรบุรี 76140',
-  customerTaxId: '0765564009988'
+  customerName: '',
+  customerAddress: '',
+  customerTaxId: ''
 };
 
 window.Modules.sales_pos = function() {
