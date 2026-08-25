@@ -19,6 +19,17 @@ window.AppStore = {
     } else {
       this.data = window.InitialAppData;
     }
+
+    // Default to Supervisor Admin if user role is missing
+    if (!this.data.currentUser || !this.data.currentUser.role) {
+      this.data.currentUser = {
+        username: 'admin',
+        name: 'นายสมศักดิ์ (หัวหน้างาน / ผู้จัดการ)',
+        role: 'supervisor',
+        avatar: '👨‍💼',
+        isLoggedIn: true
+      };
+    }
     this.save();
   },
 
@@ -29,6 +40,13 @@ window.AppStore = {
   reset() {
     localStorage.removeItem(this.key);
     this.data = window.InitialAppData;
+    this.data.currentUser = {
+      username: 'admin',
+      name: 'นายสมศักดิ์ (หัวหน้างาน / ผู้จัดการ)',
+      role: 'supervisor',
+      avatar: '👨‍💼',
+      isLoggedIn: true
+    };
     this.save();
     window.location.reload();
   }
@@ -41,6 +59,26 @@ window.AppEngine = {
     window.AppStore.init();
     this.checkAuthStatus();
     this.bindEvents();
+  },
+
+  // Toggle Role between Supervisor (Admin) and Cashier
+  toggleRole() {
+    const user = window.AppStore.data.currentUser;
+    if (user.role === 'supervisor') {
+      user.username = 'cashier1';
+      user.name = 'นายสมชาย (พนักงานขาย / POS 1)';
+      user.role = 'cashier';
+      user.avatar = '🧑‍💻';
+      this.showToast('สลับเข้าสู่สิทธิ์: พนักงานขาย / Cashier', 'warning');
+    } else {
+      user.username = 'admin';
+      user.name = 'นายสมศักดิ์ (หัวหน้างาน / ผู้จัดการ)';
+      user.role = 'supervisor';
+      user.avatar = '👨‍💼';
+      this.showToast('สลับเข้าสู่สิทธิ์สูงสุด: หัวหน้างาน / Supervisor (Admin)', 'success');
+    }
+    window.AppStore.save();
+    this.checkAuthStatus();
   },
 
   // User Auth Status & Account Guard
@@ -58,8 +96,7 @@ window.AppEngine = {
       roleDisplay.className = `role-badge ${isSuper ? 'supervisor' : 'cashier'}`;
       roleDisplay.innerHTML = `
         ${user.avatar || '👤'} <strong>${user.name}</strong> 
-        <span class="badge ${isSuper ? 'badge-success' : 'badge-warning'}" style="margin-left: 6px;">${isSuper ? 'หัวหน้างาน (Supervisor)' : 'แคชเชียร์ (Cashier)'}</span>
-        <button class="btn btn-sm btn-secondary" style="margin-left: 10px; padding: 2px 8px; font-size: 0.75rem;" onclick="AppEngine.logout()">🚪 ออกจากระบบ</button>
+        <span class="badge ${isSuper ? 'badge-success' : 'badge-warning'}" style="margin-left: 6px;">${isSuper ? 'หัวหน้างาน / Admin (สิทธิ์สูงสุด)' : 'แคชเชียร์ (Cashier)'}</span>
       `;
     }
 
@@ -73,23 +110,23 @@ window.AppEngine = {
         <div style="font-size: 3rem; margin-bottom: 10px;">🪵</div>
         <h3 style="color: var(--accent-cyan-light); font-weight: 700; margin-bottom: 5px;">บริษัท น้ำเพชรค้าไม้ จำกัด</h3>
         <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
-          กรุณาเข้าสู่ระบบเลือกบัญชีผู้ใช้งานตามตำแหน่งสิทธิ์หน้าที่
+          กรุณาเลือกสิทธิ์ตำแหน่งหน้าที่เข้าใช้งานระบบ
         </p>
 
         <!-- Quick 1-Click Select Account -->
         <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: left;">
-          <label class="form-label" style="color: #67e8f9; font-weight: 700;">👤 เลือกบัญชีผู้ใช้งานที่ต้องการเข้าสู่ระบบ:</label>
+          <label class="form-label" style="color: #67e8f9; font-weight: 700;">👤 คลิกเลือกสิทธิ์การใช้งานที่ต้องการ:</label>
           <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
             ${users.map(u => `
-              <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border-color); cursor: pointer;" onclick="AppEngine.loginAs('${u.username}')">
+              <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border-color); cursor: pointer;" onclick="AppEngine.loginAs('${u.username}')">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                  <span style="font-size: 1.5rem;">${u.avatar}</span>
+                  <span style="font-size: 1.8rem;">${u.avatar}</span>
                   <div>
-                    <div style="font-weight: 700; font-size: 0.9rem;">${u.name}</div>
-                    <div style="font-size: 0.78rem; color: var(--text-muted);">Username: <strong>${u.username}</strong> | สิทธิ์: <span class="badge ${u.role === 'supervisor' ? 'badge-success' : 'badge-warning'}">${u.role === 'supervisor' ? 'หัวหน้างาน / Admin (สิทธิ์สูงสุด)' : 'พนักงานขาย / Cashier'}</span></div>
+                    <div style="font-weight: 700; font-size: 0.95rem;">${u.name}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Username: <strong>${u.username}</strong> | สิทธิ์: <span class="badge ${u.role === 'supervisor' ? 'badge-success' : 'badge-warning'}">${u.role === 'supervisor' ? 'หัวหน้างาน / Admin (สิทธิ์เพิ่ม/แก้ไข SKU และจัดการต้นทุน)' : 'พนักงานขาย / Cashier'}</span></div>
                   </div>
                 </div>
-                <button class="btn btn-sm btn-primary">เข้าสู่ระบบ ➔</button>
+                <button class="btn btn-sm btn-primary">เข้าสิทธิ์นี้ ➔</button>
               </div>
             `).join('')}
           </div>
@@ -105,14 +142,14 @@ window.AppEngine = {
             <label class="form-label">รหัสผ่าน (Password):</label>
             <input type="password" id="login-password-input" class="form-control" placeholder="ระบุรหัสผ่าน (เช่น 123)">
           </div>
-          <button class="btn btn-primary" style="width: 100%;" onclick="AppEngine.submitLogin()">🔑 ล็อกอินเข้าสู่ระบบ</button>
+          <button class="btn btn-primary" style="width: 100%;" onclick="AppEngine.submitLogin()">🔑 เข้าสู่ระบบ</button>
         </div>
       </div>
     `;
 
-    this.openModal('🔑 เข้าสู่ระบบ - บริษัท น้ำเพชรค้าไม้ จำกัด', html, '');
-    const closeBtn = document.querySelector('.modal-close');
-    if (closeBtn) closeBtn.style.display = 'none';
+    this.openModal('🔑 สลับบัญชี / เลือกสิทธิ์เข้าใช้งาน', html, `
+      <button class="btn btn-secondary" onclick="AppEngine.closeModal()">ปิดหน้าต่าง</button>
+    `);
   },
 
   loginAs(username) {
@@ -129,7 +166,7 @@ window.AppEngine = {
 
     window.AppStore.save();
     this.closeModal();
-    this.showToast(`ยินดีต้อนรับ ${u.name} เข้าสู่ระบบ!`, 'success');
+    this.showToast(`สลับใช้งานในนาม ${u.name} สำเร็จ!`, 'success');
     this.checkAuthStatus();
   },
 
